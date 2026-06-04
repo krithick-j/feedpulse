@@ -103,6 +103,12 @@ loaded through `backend/app/data/source_manifest.py`. The Temporal activity path
 now uses `httpx`, `defusedxml`, and `feedparser` to turn fetched XML bytes into
 real `records` rows, while the simulator remains the fallback path.
 
+Backend verification:
+
+```bash
+docker compose exec -T api python -m unittest discover -s /app/tests
+```
+
 ## Next Slices
 
 1. Reduce the simulator to a narrow fallback/dev-only role.

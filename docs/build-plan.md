@@ -118,6 +118,10 @@ backend behavior, and frontend workflow.
   `61d7d7b9-2507-403e-96bd-5f934b3268ff`: its Temporal workflow was terminated
   and the DB job/task rows were repaired from `running + 101 pending` to
   terminal failure state
+- backend unit coverage now exists for XML normalization and startup
+  reconciliation under `backend/tests/`
+- `docker compose exec -T api python -m unittest discover -s /app/tests`
+  completed successfully for the backend coverage suite
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -168,6 +172,9 @@ backend behavior, and frontend workflow.
   workflow state and force-repairs the specific "still running in Temporal but
   zero task progress after grace window" failure mode that surfaced during live
   validation.
+- `backend/tests/test_xml_ingest.py` now verifies RSS/Atom normalization through
+  the real ingest path, and `backend/tests/test_job_reconciler.py` covers the
+  stale-job termination/repair flow.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
