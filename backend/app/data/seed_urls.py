@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def _seed_file_path() -> Path:
-    return Path(__file__).resolve().parents[3] / "data" / "seed_urls.csv"
+    return Path(__file__).resolve().parents[2] / "data" / "seed_urls.csv"
 
 
 @lru_cache(maxsize=1)
