@@ -1,0 +1,183 @@
+services:
+  app-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5433:5432"
+    volumes:
+      - app-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-migrate:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
+      ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
+      WAIT_FOR_POSTGRES_HOST: app-postgres
+      WAIT_FOR_POSTGRES_PORT: 5432
+      WAIT_TIMEOUT_SECONDS: 90
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+    command: ["/app/scripts/migrate.sh"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
+      ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
+      DATA_BACKEND: database
+      JOB_EXECUTION_BACKEND: ${JOB_EXECUTION_BACKEND:-temporal}
+      WAIT_FOR_POSTGRES_HOST: app-postgres
+      WAIT_FOR_POSTGRES_PORT: 5432
+      WAIT_TIMEOUT_SECONDS: 90
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_WORKFLOW_TASK_QUEUE: feedpulse-workflow-queue
+      TEMPORAL_SMALL_ACTIVITY_TASK_QUEUE: xml-small-queue
+      TEMPORAL_LARGE_ACTIVITY_TASK_QUEUE: xml-large-queue
+      API_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+    command: ["/app/scripts/start_api.sh"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_USE_MOCK_DATA: "false"
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  temporal-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_UI_PORT: 8080
+    ports:
+      - "8088:8080"
+    depends_on:
+      temporal:
+        condition: service_started
+
+  temporal-worker-small:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
+      ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
+      DATA_BACKEND: database
+      JOB_EXECUTION_BACKEND: temporal
+      WAIT_FOR_POSTGRES_HOST: app-postgres
+      WAIT_FOR_POSTGRES_PORT: 5432
+      WAIT_FOR_TEMPORAL: "1"
+      WAIT_TIMEOUT_SECONDS: 90
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_WORKFLOW_TASK_QUEUE: feedpulse-workflow-queue
+      TEMPORAL_SMALL_ACTIVITY_TASK_QUEUE: xml-small-queue
+      TEMPORAL_LARGE_ACTIVITY_TASK_QUEUE: xml-large-queue
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+    command: ["/app/scripts/start_worker.sh", "python", "-m", "app.temporal.worker", "--mode", "small"]
+
+  temporal-worker-large:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
+      ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
+      DATA_BACKEND: database
+      JOB_EXECUTION_BACKEND: temporal
+      WAIT_FOR_POSTGRES_HOST: app-postgres
+      WAIT_FOR_POSTGRES_PORT: 5432
+      WAIT_FOR_TEMPORAL: "1"
+      WAIT_TIMEOUT_SECONDS: 90
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_WORKFLOW_TASK_QUEUE: feedpulse-workflow-queue
+      TEMPORAL_SMALL_ACTIVITY_TASK_QUEUE: xml-small-queue
+      TEMPORAL_LARGE_ACTIVITY_TASK_QUEUE: xml-large-queue
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+    command: ["/app/scripts/start_worker.sh", "python", "-m", "app.temporal.worker", "--mode", "large"]
+
+volumes:
+  app-postgres-data:
+  temporal-postgres-data:

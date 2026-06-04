@@ -1,0 +1,24 @@
+[project]
+name = "feedpulse-api"
+version = "0.1.0"
+description = "Backend API scaffold for Feedpulse"
+requires-python = ">=3.9"
+dependencies = [
+  "alembic>=1.13.2",
+  "asyncpg>=0.29.0",
+  "fastapi>=0.111.0",
+  "pydantic-settings>=2.3.4",
+  "psycopg2-binary>=2.9.9",
+  "temporalio>=1.8.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
+  "sqlalchemy>=2.0.31",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
