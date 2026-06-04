@@ -40,8 +40,7 @@ async def main() -> None:
             activities=[set_job_running_activity, fail_incomplete_tasks_activity, finalize_job_activity],
             max_concurrent_activities=4,
         )
-        async with worker:
-            await worker.run()
+        await worker.run()
     elif args.mode == "small":
         worker = Worker(
             client,
@@ -50,8 +49,7 @@ async def main() -> None:
             activities=[process_single_url_activity],
             max_concurrent_activities=32,
         )
-        async with worker:
-            await worker.run()
+        await worker.run()
     else:
         worker = Worker(
             client,
@@ -60,8 +58,7 @@ async def main() -> None:
             activities=[process_single_url_activity],
             max_concurrent_activities=12,
         )
-        async with worker:
-            await worker.run()
+        await worker.run()
 
 
 if __name__ == "__main__":
