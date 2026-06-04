@@ -87,8 +87,9 @@ uvicorn app.main:app --reload
 
 Database configuration is defined in `backend/.env.example`. Alembic is scaffolded
 under `backend/alembic/`, with the initial schema in
-`backend/alembic/versions/20260604_0001_initial_schema.py`. The deduped seed URL
-list used for job creation lives in `data/seed_urls.csv`.
+`backend/alembic/versions/20260604_0001_initial_schema.py`. The deduped XML
+source manifest used for job creation lives in `data/xml_sources.csv` and is
+loaded through `backend/app/data/source_manifest.py`.
 
 ## Next Slices
 

@@ -122,9 +122,9 @@ class MockJobStore:
     def __init__(self) -> None:
         self._jobs: Dict[str, JobDetail] = {}
         self._idempotency: Dict[str, str] = {}
-        self._seed()
+        self._bootstrap()
 
-    def _seed(self) -> None:
+    def _bootstrap(self) -> None:
         initial = [
             JobDetail(
                 id="job-2026-001",
@@ -342,4 +342,3 @@ class MockJobStore:
 
 
 store = MockJobStore()
-

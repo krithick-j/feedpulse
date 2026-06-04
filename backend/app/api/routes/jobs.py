@@ -13,7 +13,7 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from app.core.settings import get_settings
 from app.data.mock_store import store
-from app.data.seed_urls import load_seed_urls
+from app.data.source_manifest import load_source_urls
 from app.db.enums import TaskStatus as DbTaskStatus
 from app.db.notifications import JobEventListener
 from app.db.session import get_db_session
@@ -49,7 +49,7 @@ async def start_job(
     response = await _with_repository(
         lambda repository: repository.create_job_with_tasks(
             idempotency_key=idempotency_key,
-            urls=load_seed_urls(),
+            urls=load_source_urls(),
         )
     )
     if not response.reused:

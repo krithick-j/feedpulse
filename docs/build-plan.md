@@ -38,7 +38,7 @@ backend behavior, and frontend workflow.
 - added async database session scaffolding and environment-based DB settings
 - added Alembic config and an initial migration matching the schema plan
 - added a repository seam for job/task persistence reads and idempotent creation
-- vendored the deduped 101-URL seed list into the repo
+- vendored the deduped 101-URL XML source manifest into the repo
 - added a backend mode switch so routes can run in `mock` or `database` mode
 - added backend and frontend Dockerfiles plus a first `docker-compose.yml`
 - added explicit backend boot scripts for migrations, API startup, and future worker startup
@@ -96,7 +96,7 @@ backend behavior, and frontend workflow.
 - `python3 -m py_compile` completed successfully for the backend scaffold files
 - `python3 -m py_compile` completed successfully for the new DB, Alembic, and
   repository files
-- the vendored `data/seed_urls.csv` contains 101 unique URLs
+- the vendored `data/xml_sources.csv` contains 101 unique URLs
 - `docker compose config` completed successfully for `docker-compose.yml`
 - `python3 -m py_compile` completed successfully for the new simulator service
 - `docker compose config` completed successfully after promoting the Temporal-first local stack
@@ -129,8 +129,8 @@ backend behavior, and frontend workflow.
   `jobs`, `job_tasks`, `task_attempts`, `records`, plus native enums.
 - The API now supports two runtime backends:
   `mock` for demo behavior and `database` for repository-backed reads/writes.
-- Job creation in `database` mode uses the vendored deduped seed list from
-  `data/seed_urls.csv` rather than a hardcoded demo URL catalog.
+- Job creation in `database` mode uses the vendored deduped XML source manifest
+  from `data/xml_sources.csv` rather than a hardcoded demo URL catalog.
 - The default Compose stack now includes the Temporal server, Temporal UI, and
   small/large workers alongside `app-postgres`, `db-migrate`, `api`, and
   `frontend`, so local DB-mode startup is Temporal-first rather than

@@ -5,16 +5,16 @@ from functools import lru_cache
 from pathlib import Path
 
 
-def _seed_file_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "seed_urls.csv"
+def _manifest_file_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "data" / "xml_sources.csv"
 
 
 @lru_cache(maxsize=1)
-def load_seed_urls() -> list[str]:
+def load_source_urls() -> list[str]:
     urls: list[str] = []
     seen: set[str] = set()
 
-    with _seed_file_path().open(newline="", encoding="utf-8") as handle:
+    with _manifest_file_path().open(newline="", encoding="utf-8") as handle:
         reader = csv.reader(handle)
         for row in reader:
             for cell in row:
