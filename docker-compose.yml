@@ -122,6 +122,34 @@ services:
       temporal:
         condition: service_started
 
+  temporal-worker-workflow:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
+      ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
+      DATA_BACKEND: database
+      JOB_EXECUTION_BACKEND: temporal
+      WAIT_FOR_POSTGRES_HOST: app-postgres
+      WAIT_FOR_POSTGRES_PORT: 5432
+      WAIT_FOR_TEMPORAL: "1"
+      WAIT_TIMEOUT_SECONDS: 90
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: 7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_WORKFLOW_TASK_QUEUE: feedpulse-workflow-queue
+      TEMPORAL_SMALL_ACTIVITY_TASK_QUEUE: xml-small-queue
+      TEMPORAL_LARGE_ACTIVITY_TASK_QUEUE: xml-large-queue
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+    command: ["/app/scripts/start_worker.sh", "python", "-m", "app.temporal.worker", "--mode", "workflow"]
+
   temporal-worker-small:
     build:
       context: .

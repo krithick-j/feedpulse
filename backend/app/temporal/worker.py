@@ -20,9 +20,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a Feedpulse Temporal worker.")
     parser.add_argument(
         "--mode",
-        choices=["small", "large"],
-        default="small",
-        help="Worker mode. Small runs workflows and small-lane activities, large runs large-lane activities only.",
+        choices=["workflow", "small", "large"],
+        default="workflow",
+        help="Worker mode. Workflow runs workflow-queue activities, small runs small-lane activities, large runs large-lane activities.",
     )
     return parser.parse_args()
 
@@ -32,23 +32,26 @@ async def main() -> None:
     settings = get_settings()
     client = await get_temporal_client()
 
-    if args.mode == "small":
-        workflow_worker = Worker(
+    if args.mode == "workflow":
+        worker = Worker(
             client,
             task_queue=settings.temporal_workflow_task_queue,
             workflows=[ProcessXmlJobWorkflow],
             activities=[set_job_running_activity, fail_incomplete_tasks_activity, finalize_job_activity],
             max_concurrent_activities=4,
         )
-        activity_worker = Worker(
+        async with worker:
+            await worker.run()
+    elif args.mode == "small":
+        worker = Worker(
             client,
             task_queue=settings.temporal_small_activity_task_queue,
             workflows=[],
             activities=[process_single_url_activity],
             max_concurrent_activities=32,
         )
-        async with workflow_worker, activity_worker:
-            await asyncio.gather(workflow_worker.run(), activity_worker.run())
+        async with worker:
+            await worker.run()
     else:
         worker = Worker(
             client,

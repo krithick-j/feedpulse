@@ -13,7 +13,7 @@ branch_labels = None
 depends_on = None
 
 
-job_status = sa.Enum(
+job_status = postgresql.ENUM(
     "pending",
     "running",
     "completed",
@@ -22,7 +22,7 @@ job_status = sa.Enum(
     name="job_status",
     create_type=False,
 )
-task_status = sa.Enum(
+task_status = postgresql.ENUM(
     "pending",
     "in_progress",
     "completed",
@@ -30,14 +30,14 @@ task_status = sa.Enum(
     name="task_status",
     create_type=False,
 )
-attempt_status = sa.Enum(
+attempt_status = postgresql.ENUM(
     "running",
     "succeeded",
     "failed",
     name="attempt_status",
     create_type=False,
 )
-feed_type = sa.Enum(
+feed_type = postgresql.ENUM(
     "rss",
     "atom",
     "rdf",
