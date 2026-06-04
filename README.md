@@ -33,6 +33,11 @@ The Temporal execution path now includes:
 - a real XML ingest module under `backend/app/services/xml_ingest.py` that fetches,
   preflights, parses, and normalizes feed records for the Temporal activity path
 
+That path has now been exercised against the local Compose runtime with a real
+job: one recent run completed with `99` successful feeds, `2` failed feeds, and
+persisted thousands of extracted records into Postgres. The main remaining
+runtime gap is retry semantics for transient fetch failures.
+
 ## Layout
 
 ```text

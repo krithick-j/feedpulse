@@ -106,6 +106,10 @@ backend behavior, and frontend workflow.
 - `docker compose config` completed successfully after promoting the Temporal-first local stack
 - `python3 -m py_compile` completed successfully for the new Temporal modules
 - `python3 -m py_compile` completed successfully for the new XML ingest module
+- the Temporal-first Compose runtime was exercised end to end with a real job
+  (`bf44baf1-75be-44cd-af77-f31a78db7cdf`) that finished as
+  `completed_with_failures` with `99` completed tasks, `2` failed tasks, and
+  `5167` persisted records
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -149,6 +153,9 @@ backend behavior, and frontend workflow.
   `records` schema shape using `httpx` + `defusedxml` + `feedparser`, while the
   simulator still exists as the fallback runtime path and source of synthetic
   demo records.
+- The live runtime validation also surfaced the next meaningful backend gap:
+  timeout-class fetch failures are still treated as terminal task failures in
+  the current activity path, instead of flowing through Temporal retry policy.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.

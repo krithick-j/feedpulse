@@ -24,7 +24,7 @@ class ProcessXmlJobWorkflow:
         try:
             await workflow.execute_activity(
                 set_job_running_activity,
-                payload.job_id,
+                args=(payload.job_id,),
                 start_to_close_timeout=timedelta(seconds=10),
                 retry_policy=RetryPolicy(maximum_attempts=3),
             )
@@ -32,8 +32,7 @@ class ProcessXmlJobWorkflow:
             tasks = [
                 workflow.execute_activity(
                     process_single_url_activity,
-                    payload.job_id,
-                    task,
+                    args=(payload.job_id, task),
                     task_queue=task.queue,
                     start_to_close_timeout=timedelta(seconds=30),
                     schedule_to_close_timeout=timedelta(minutes=2),
@@ -53,9 +52,11 @@ class ProcessXmlJobWorkflow:
         except Exception as exc:
             await workflow.execute_activity(
                 fail_incomplete_tasks_activity,
-                payload.job_id,
-                type(exc).__name__,
-                str(exc) or "Temporal workflow execution failed",
+                args=(
+                    payload.job_id,
+                    type(exc).__name__,
+                    str(exc) or "Temporal workflow execution failed",
+                ),
                 start_to_close_timeout=timedelta(seconds=15),
                 retry_policy=RetryPolicy(maximum_attempts=3),
             )
@@ -63,7 +64,7 @@ class ProcessXmlJobWorkflow:
         finally:
             await workflow.execute_activity(
                 finalize_job_activity,
-                payload.job_id,
+                args=(payload.job_id,),
                 start_to_close_timeout=timedelta(seconds=10),
                 retry_policy=RetryPolicy(maximum_attempts=3),
             )
