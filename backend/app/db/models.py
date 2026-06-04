@@ -12,6 +12,16 @@ from app.db.base import Base
 from app.db.enums import AttemptStatus, FeedType, JobStatus, TaskStatus
 
 
+def _native_enum(enum_cls: type, name: str) -> Enum:
+    return Enum(
+        enum_cls,
+        name=name,
+        native_enum=True,
+        values_callable=lambda members: [member.value for member in members],
+        validate_strings=True,
+    )
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -33,7 +43,7 @@ class Job(Base, TimestampMixin):
     idempotency_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     temporal_run_id: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status", native_enum=True),
+        _native_enum(JobStatus, "job_status"),
         nullable=False,
         default=JobStatus.PENDING,
         server_default=JobStatus.PENDING.value,
@@ -69,7 +79,7 @@ class JobTask(Base, TimestampMixin):
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status", native_enum=True),
+        _native_enum(TaskStatus, "task_status"),
         nullable=False,
         default=TaskStatus.PENDING,
         server_default=TaskStatus.PENDING.value,
@@ -110,7 +120,7 @@ class TaskAttempt(Base):
     )
     attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[AttemptStatus] = mapped_column(
-        Enum(AttemptStatus, name="attempt_status", native_enum=True),
+        _native_enum(AttemptStatus, "attempt_status"),
         nullable=False,
         default=AttemptStatus.RUNNING,
         server_default=AttemptStatus.RUNNING.value,
@@ -154,7 +164,7 @@ class Record(Base):
     summary: Mapped[Optional[str]] = mapped_column(Text)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     feed_type: Mapped[FeedType] = mapped_column(
-        Enum(FeedType, name="feed_type", native_enum=True),
+        _native_enum(FeedType, "feed_type"),
         nullable=False,
         default=FeedType.UNKNOWN,
         server_default=FeedType.UNKNOWN.value,
