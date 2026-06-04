@@ -76,6 +76,12 @@ class JobRepository:
         rows = await self.session.execute(self._job_summary_query().limit(limit))
         return [self._map_summary_row(row) for row in rows.mappings()]
 
+    async def list_running_jobs(self) -> list[JobSummary]:
+        rows = await self.session.execute(
+            self._job_summary_query().where(Job.status == JobStatus.RUNNING)
+        )
+        return [self._map_summary_row(row) for row in rows.mappings()]
+
     async def get_job_detail(self, job_id: uuid.UUID) -> Optional[JobDetail]:
         projection = await self.get_job_projection(job_id)
         if projection is None:

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.health import router as health_router
 from app.api.routes.jobs import router as jobs_router
 from app.core.settings import get_settings
+from app.services.job_reconciler import reconcile_running_jobs
 
 settings = get_settings()
 
@@ -23,6 +24,11 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(jobs_router)
+
+
+@app.on_event("startup")
+async def reconcile_temporal_jobs_on_startup() -> None:
+    await reconcile_running_jobs()
 
 
 @app.get("/api/v1")

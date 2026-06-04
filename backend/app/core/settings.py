@@ -30,6 +30,14 @@ class Settings(BaseSettings):
         default="simulator",
         alias="JOB_EXECUTION_BACKEND",
     )
+    job_reconciliation_grace_seconds: int = Field(
+        default=60,
+        alias="JOB_RECONCILIATION_GRACE_SECONDS",
+    )
+    job_reconciliation_pending_history_limit: int = Field(
+        default=25,
+        alias="JOB_RECONCILIATION_PENDING_HISTORY_LIMIT",
+    )
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

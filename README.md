@@ -36,8 +36,10 @@ The Temporal execution path now includes:
 That path has now been exercised against the local Compose runtime with a real
 job: one recent run completed with `99` successful feeds, `2` failed feeds, and
 persisted thousands of extracted records into Postgres. Transient fetch failures
-now retry through Temporal attempts before becoming terminal; the main remaining
-runtime work is hardening and broadening that retry policy.
+now retry through Temporal attempts before becoming terminal. The API startup
+path also now reconciles stale `running` jobs against Temporal state so
+activation failures do not strand old jobs forever. The main remaining runtime
+work is hardening and broadening those recovery rules.
 
 ## Layout
 
@@ -103,7 +105,6 @@ real `records` rows, while the simulator remains the fallback path.
 
 ## Next Slices
 
-1. Validate the Temporal-first Compose runtime end to end with real worker execution.
-2. Harden transient-vs-permanent retry handling around the real XML ingest path.
-3. Reduce the simulator to a narrow fallback/dev-only role.
-4. Expand automated coverage around the Temporal runtime and notification-driven SSE path.
+1. Reduce the simulator to a narrow fallback/dev-only role.
+2. Broaden Temporal recovery and retry coverage beyond the current startup reconciliation path.
+3. Expand automated coverage around the Temporal runtime and notification-driven SSE path.

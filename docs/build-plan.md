@@ -82,16 +82,16 @@ backend behavior, and frontend workflow.
 - keep the frontend and backend response shapes aligned as `database` mode takes
   over from the in-memory path
 - harden the new Temporal runtime from scaffold to practical default runtime
-- harden retry classification around the new real XML ingest path
+- broaden retry and reconciliation coverage around the real XML ingest path
 - keep this document updated as the live API replaces the mock adapter
 
 ### Next
 
-1. Validate the Temporal-first runtime end to end with real Compose execution.
-2. Reduce the in-process simulator to an explicit fallback-only path.
-3. Promote push-based projection updates beyond the current single-channel
+1. Reduce the in-process simulator to an explicit fallback-only path.
+2. Promote push-based projection updates beyond the current single-channel
    notification seam.
-4. Add broader automated verification around the Temporal runtime path.
+3. Add broader automated verification around the Temporal runtime path.
+4. Broaden workflow-recovery coverage beyond the current startup reconciliation pass.
 
 ## Verification Notes
 
@@ -114,6 +114,10 @@ backend behavior, and frontend workflow.
   retry behavior: task `221` failed once with `FeedFetchError` and then
   succeeded on attempt `2`, while the job still finished with only the
   permanent `403` failure
+- API startup reconciliation was validated against the previously stranded job
+  `61d7d7b9-2507-403e-96bd-5f934b3268ff`: its Temporal workflow was terminated
+  and the DB job/task rows were repaired from `running + 101 pending` to
+  terminal failure state
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -160,6 +164,10 @@ backend behavior, and frontend workflow.
 - Timeout-class fetch failures now record failed attempts and flow through
   Temporal retries before the task is marked terminal; this was validated
   against a live run where one task succeeded on attempt `2`.
+- On API startup, the backend now reconciles `running` DB jobs against Temporal
+  workflow state and force-repairs the specific "still running in Temporal but
+  zero task progress after grace window" failure mode that surfaced during live
+  validation.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
