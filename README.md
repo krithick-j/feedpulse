@@ -30,6 +30,8 @@ The Temporal execution path now includes:
 - workflow/activity modules under `backend/app/temporal/`
 - worker entrypoint under `python -m app.temporal.worker`
 - default Compose services for Temporal server, UI, and workers
+- a real XML ingest module under `backend/app/services/xml_ingest.py` that fetches,
+  preflights, parses, and normalizes feed records for the Temporal activity path
 
 ## Layout
 
@@ -89,10 +91,13 @@ Database configuration is defined in `backend/.env.example`. Alembic is scaffold
 under `backend/alembic/`, with the initial schema in
 `backend/alembic/versions/20260604_0001_initial_schema.py`. The deduped XML
 source manifest used for job creation lives in `data/xml_sources.csv` and is
-loaded through `backend/app/data/source_manifest.py`.
+loaded through `backend/app/data/source_manifest.py`. The Temporal activity path
+now uses `httpx`, `defusedxml`, and `feedparser` to turn fetched XML bytes into
+real `records` rows, while the simulator remains the fallback path.
 
 ## Next Slices
 
 1. Validate the Temporal-first Compose runtime end to end with real worker execution.
-2. Reduce the simulator to a narrow fallback/dev-only role.
-3. Expand automated coverage around the Temporal runtime and notification-driven SSE path.
+2. Harden transient-vs-permanent retry handling around the real XML ingest path.
+3. Reduce the simulator to a narrow fallback/dev-only role.
+4. Expand automated coverage around the Temporal runtime and notification-driven SSE path.

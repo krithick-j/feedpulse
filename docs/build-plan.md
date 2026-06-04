@@ -68,6 +68,9 @@ backend behavior, and frontend workflow.
   the shared runtime lane selection
 - promoted the default local Compose stack to a Temporal-first DB-mode runtime,
   while keeping the simulator available as an explicit fallback
+- replaced the synthetic Temporal activity payload generator with a real XML
+  ingest path that fetches bytes, runs a `defusedxml` preflight, parses via
+  `feedparser`, and normalizes records into the schema shape
 - implemented dashboard routes for jobs list, job detail, and task detail
 - added mock job/task data plus a simulated live-update loop to exercise the UI
 - captured the current implementation context in this document
@@ -79,6 +82,7 @@ backend behavior, and frontend workflow.
 - keep the frontend and backend response shapes aligned as `database` mode takes
   over from the in-memory path
 - harden the new Temporal runtime from scaffold to practical default runtime
+- harden retry classification around the new real XML ingest path
 - keep this document updated as the live API replaces the mock adapter
 
 ### Next
@@ -101,6 +105,7 @@ backend behavior, and frontend workflow.
 - `python3 -m py_compile` completed successfully for the new simulator service
 - `docker compose config` completed successfully after promoting the Temporal-first local stack
 - `python3 -m py_compile` completed successfully for the new Temporal modules
+- `python3 -m py_compile` completed successfully for the new XML ingest module
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -140,6 +145,10 @@ backend behavior, and frontend workflow.
 - A Temporal-backed path now exists as the main orchestration path:
   the API can start a workflow, workers can poll workflow/small/large task
   queues, and the default Compose stack wires those services together.
+- The Temporal activity path now fetches and parses real XML feeds into the
+  `records` schema shape using `httpx` + `defusedxml` + `feedparser`, while the
+  simulator still exists as the fallback runtime path and source of synthetic
+  demo records.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.

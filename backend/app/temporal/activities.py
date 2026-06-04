@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import asyncio
+import time
 import uuid
 
 from temporalio import activity
 
 from app.db.session import SessionLocal
 from app.repositories.jobs import JobRepository
-from app.services.job_runtime import build_records, is_forbidden_url, task_delay_seconds, task_duration_ms
+from app.services.xml_ingest import HttpClientError, XmlIngestError, extract_feed_records
 from app.temporal.types import ProcessedTaskResult, WorkflowTaskInput
 
 
@@ -22,6 +22,7 @@ async def set_job_running_activity(job_id: str) -> None:
 async def process_single_url_activity(job_id: str, task: WorkflowTaskInput) -> ProcessedTaskResult:
     queue = task.queue
     attempt_number = activity.info().attempt
+    started_at = time.perf_counter()
 
     async with SessionLocal() as session:
         repository = JobRepository(session)
@@ -31,30 +32,33 @@ async def process_single_url_activity(job_id: str, task: WorkflowTaskInput) -> P
             attempt_number=attempt_number,
         )
 
-    await asyncio.sleep(task_delay_seconds(task.task_id, task.url))
-
-    async with SessionLocal() as session:
-        repository = JobRepository(session)
-        duration_ms = task_duration_ms(task.task_id)
-
-        if is_forbidden_url(task.url):
+    try:
+        records = await extract_feed_records(task.url, queue=queue)
+    except XmlIngestError as exc:
+        duration_ms = _duration_ms(started_at)
+        http_status = exc.status_code if isinstance(exc, HttpClientError) else None
+        error_type = type(exc).__name__
+        async with SessionLocal() as session:
+            repository = JobRepository(session)
             await repository.complete_task_failure(
                 task.task_id,
                 queue=queue,
-                error_type="HttpClientError",
-                error_message="403 response while fetching feed",
-                http_status=403,
+                error_type=error_type,
+                error_message=str(exc),
+                http_status=http_status,
                 duration_ms=duration_ms,
                 attempt_number=attempt_number,
             )
-            return ProcessedTaskResult(
-                task_id=task.task_id,
-                status="failed",
-                queue=queue,
-                records_extracted=0,
-            )
+        return ProcessedTaskResult(
+            task_id=task.task_id,
+            status="failed",
+            queue=queue,
+            records_extracted=0,
+        )
 
-        records = build_records(task.url, task.task_id)
+    duration_ms = _duration_ms(started_at)
+    async with SessionLocal() as session:
+        repository = JobRepository(session)
         await repository.complete_task_success(
             task.task_id,
             queue=queue,
@@ -68,6 +72,10 @@ async def process_single_url_activity(job_id: str, task: WorkflowTaskInput) -> P
             queue=queue,
             records_extracted=len(records),
         )
+
+
+def _duration_ms(started_at: float) -> int:
+    return int((time.perf_counter() - started_at) * 1000)
 
 
 @activity.defn
