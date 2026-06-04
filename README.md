@@ -35,8 +35,9 @@ The Temporal execution path now includes:
 
 That path has now been exercised against the local Compose runtime with a real
 job: one recent run completed with `99` successful feeds, `2` failed feeds, and
-persisted thousands of extracted records into Postgres. The main remaining
-runtime gap is retry semantics for transient fetch failures.
+persisted thousands of extracted records into Postgres. Transient fetch failures
+now retry through Temporal attempts before becoming terminal; the main remaining
+runtime work is hardening and broadening that retry policy.
 
 ## Layout
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+URL_ACTIVITY_MAX_ATTEMPTS = 3
+
 
 @dataclass
 class WorkflowTaskInput:

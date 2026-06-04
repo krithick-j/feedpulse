@@ -392,6 +392,49 @@ class JobRepository:
         await self.session.commit()
         return True
 
+    async def mark_task_attempt_failed(
+        self,
+        task_id: int,
+        *,
+        queue: str,
+        error_type: str,
+        error_message: str,
+        http_status: Optional[int],
+        duration_ms: int,
+        attempt_number: int,
+    ) -> bool:
+        task = await self.session.get(JobTask, task_id)
+        if task is None:
+            return False
+
+        now = datetime.now(timezone.utc)
+
+        await self.session.execute(
+            update(TaskAttempt)
+            .where(
+                TaskAttempt.task_id == task_id,
+                TaskAttempt.attempt_number == attempt_number,
+            )
+            .values(
+                status=AttemptStatus.FAILED,
+                http_status=http_status,
+                error_type=error_type,
+                error_message=error_message,
+                finished_at=now,
+                duration_ms=duration_ms,
+            )
+        )
+
+        task.status = TaskStatus.IN_PROGRESS
+        task.queue = queue
+        task.attempt_count = max(task.attempt_count, attempt_number)
+        task.last_error = error_message
+        task.last_error_type = error_type
+
+        await self._notify_job_event(task.job_id, "task.updated", task_id=task_id)
+        await self.session.commit()
+        return True
+
     async def finalize_job(self, job_id: uuid.UUID) -> bool:
         job = await self.session.get(Job, job_id)
         if job is None:

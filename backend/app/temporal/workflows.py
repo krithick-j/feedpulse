@@ -6,7 +6,7 @@ from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from app.temporal.types import ProcessXmlJobInput, ProcessedTaskResult
+from app.temporal.types import ProcessXmlJobInput, ProcessedTaskResult, URL_ACTIVITY_MAX_ATTEMPTS
 
 with workflow.unsafe.imports_passed_through():
     from app.temporal.activities import (
@@ -41,7 +41,7 @@ class ProcessXmlJobWorkflow:
                         initial_interval=timedelta(seconds=1),
                         backoff_coefficient=2.0,
                         maximum_interval=timedelta(seconds=10),
-                        maximum_attempts=3,
+                        maximum_attempts=URL_ACTIVITY_MAX_ATTEMPTS,
                         non_retryable_error_types=["HttpClientError"],
                     ),
                 )
