@@ -109,6 +109,9 @@ Backend verification:
 docker compose exec -T api python -m unittest discover -s /app/tests
 ```
 
+That suite now covers XML normalization, startup reconciliation, and Temporal
+activity retry/failure semantics.
+
 ## Next Slices
 
 1. Reduce the simulator to a narrow fallback/dev-only role.

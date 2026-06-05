@@ -76,6 +76,8 @@ backend behavior, and frontend workflow.
 - captured the current implementation context in this document
 - switched the frontend package workflow to `pnpm`
 - verified the frontend with a successful `pnpm build`
+- added direct backend coverage for Temporal activity success, permanent
+  failure, retryable fetch failure, and terminal retry exhaustion behavior
 
 ### In Progress
 
@@ -121,7 +123,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  completed successfully for the backend coverage suite
+  now completes successfully with `7` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -175,6 +177,9 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_xml_ingest.py` now verifies RSS/Atom normalization through
   the real ingest path, and `backend/tests/test_job_reconciler.py` covers the
   stale-job termination/repair flow.
+- `backend/tests/test_temporal_activities.py` now covers the real Temporal
+  activity branch behavior for success, permanent HTTP failure, retryable
+  transport failure, and terminal retry exhaustion.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
