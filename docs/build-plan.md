@@ -90,6 +90,8 @@ backend behavior, and frontend workflow.
   closed workflows, and healthy no-op running cases
 - added a live runtime smoke verifier that drives the running API end to end
   and validates job completion plus extracted-record retrieval
+- added a live SSE smoke verifier that drives `/jobs/{id}/events` against the
+  running stack and validates streaming progress/task/completion events
 
 ### In Progress
 
@@ -104,8 +106,7 @@ backend behavior, and frontend workflow.
 1. Promote push-based projection updates beyond the current single-channel
    notification seam.
 2. Add broader automated verification around the Temporal runtime path.
-3. Broaden workflow-recovery coverage beyond the currently verified
-   reconciliation branches and single smoke-run scenario.
+3. Broaden the live runtime verifiers into more scenario-specific checks.
 
 ## Verification Notes
 
@@ -140,6 +141,10 @@ backend behavior, and frontend workflow.
   completed successfully against the live stack, producing job
   `14db7a61-a4c3-4558-ae9f-64af9f6e606d` with `100` completed tasks, `1`
   failed task, and a verified completed task record fetch
+- `docker compose exec -T api python /app/scripts/verify_live_sse.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack, producing job
+  `d5ecdcff-2aa3-4b4b-9552-ddc2d359d534` with `204` progress events,
+  `202` task update events, and a terminal `completed_with_failures` SSE flow
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -220,6 +225,9 @@ backend behavior, and frontend workflow.
 - `backend/scripts/verify_live_runtime.py` now provides an end-to-end smoke
   verifier for the running API/runtime path, including job start, terminal
   polling, completed-task lookup, and extracted-record retrieval.
+- `backend/scripts/verify_live_sse.py` now provides a live SSE verifier for the
+  running `/events` path, including initial snapshot, progress/task updates,
+  and terminal completion flow checks.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
