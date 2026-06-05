@@ -1,0 +1,192 @@
+from __future__ import annotations
+
+import json
+import unittest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
+from app.api.routes import jobs as job_routes
+from app.db.notifications import JobNotification, _parse_job_notification
+from app.schemas.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
+
+
+JOB_ID = "11111111-1111-4111-8111-111111111111"
+
+
+def build_projection(
+    *,
+    status: str,
+    counts: JobCounts,
+    task_status: str,
+    attempt_count: int,
+    records_extracted: int,
+    elapsed_ms: int,
+) -> JobProjection:
+    return JobProjection(
+        job=JobSummary(
+            id=JOB_ID,
+            status=status,
+            total_urls=1,
+            counts=counts,
+            created_at="2026-06-05T10:00:00+00:00",
+            started_at="2026-06-05T10:00:05+00:00",
+            finished_at="2026-06-05T10:00:15+00:00" if status != "running" else None,
+            elapsed_ms=elapsed_ms,
+            temporal_run_id="run-1",
+        ),
+        live=status == "running",
+        task_summaries=[
+            TaskSummary(
+                id=1,
+                url="https://example.com/feed.xml",
+                status=task_status,
+                queue="xml-small-queue",
+                attempt_count=attempt_count,
+                records_extracted=records_extracted,
+                duration_ms=120 if task_status != "pending" else None,
+                last_error="Timeout while fetching feed" if task_status == "failed" else None,
+                last_error_type="FeedFetchError" if task_status == "failed" else None,
+                started_at="2026-06-05T10:00:05+00:00" if task_status != "pending" else None,
+                finished_at="2026-06-05T10:00:15+00:00" if task_status in {"completed", "failed"} else None,
+            )
+        ],
+    )
+
+
+class FakeListener:
+    def __init__(self, events: list[object | None]) -> None:
+        self._events = list(events)
+
+    async def __aenter__(self) -> "FakeListener":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    async def next_event(self, *, timeout=None):
+        if self._events:
+            return self._events.pop(0)
+        return None
+
+
+async def collect_sse(response) -> list[dict]:
+    events: list[dict] = []
+    async for chunk in response.body_iterator:
+        text = chunk.decode() if isinstance(chunk, bytes) else chunk
+        if not text.startswith("data: "):
+            continue
+        events.append(json.loads(text.removeprefix("data: ").strip()))
+    return events
+
+
+class JobNotificationTests(unittest.TestCase):
+    def test_parse_job_notification_accepts_valid_payload(self) -> None:
+        payload = json.dumps(
+            {
+                "job_id": JOB_ID,
+                "scope": "task.updated",
+                "task_id": 4,
+            }
+        )
+
+        parsed = _parse_job_notification(payload)
+
+        self.assertEqual(
+            parsed,
+            JobNotification(job_id=JOB_ID, scope="task.updated", task_id=4),
+        )
+
+    def test_parse_job_notification_rejects_invalid_payloads(self) -> None:
+        self.assertIsNone(_parse_job_notification("not-json"))
+        self.assertIsNone(_parse_job_notification(json.dumps({"job_id": JOB_ID})))
+        self.assertIsNone(
+            _parse_job_notification(
+                json.dumps(
+                    {
+                        "job_id": JOB_ID,
+                        "scope": "task.updated",
+                        "task_id": "1",
+                    }
+                )
+            )
+        )
+
+
+class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
+    async def test_stream_job_events_emits_snapshot_and_completed_for_terminal_job(self) -> None:
+        terminal_projection = build_projection(
+            status="completed",
+            counts=JobCounts(pending=0, in_progress=0, completed=1, failed=0),
+            task_status="completed",
+            attempt_count=1,
+            records_extracted=3,
+            elapsed_ms=1500,
+        )
+
+        with (
+            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(
+                job_routes,
+                "_with_repository",
+                new=AsyncMock(side_effect=[terminal_projection, terminal_projection]),
+            ),
+            patch.object(job_routes, "JobEventListener", return_value=FakeListener([])),
+        ):
+            response = await job_routes.stream_job_events(JOB_ID)
+            events = await collect_sse(response)
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["job.snapshot", "job.completed"],
+        )
+        self.assertEqual(events[0]["payload"]["status"], "completed")
+        self.assertEqual(events[1]["payload"]["counts"]["completed"], 1)
+
+    async def test_stream_job_events_emits_task_delta_then_progress_then_completed(self) -> None:
+        initial_projection = build_projection(
+            status="running",
+            counts=JobCounts(pending=1, in_progress=0, completed=0, failed=0),
+            task_status="pending",
+            attempt_count=0,
+            records_extracted=0,
+            elapsed_ms=100,
+        )
+        terminal_projection = build_projection(
+            status="completed_with_failures",
+            counts=JobCounts(pending=0, in_progress=0, completed=0, failed=1),
+            task_status="failed",
+            attempt_count=3,
+            records_extracted=0,
+            elapsed_ms=1800,
+        )
+
+        with (
+            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(
+                job_routes,
+                "_with_repository",
+                new=AsyncMock(
+                    side_effect=[
+                        initial_projection,
+                        initial_projection,
+                        terminal_projection,
+                    ]
+                ),
+            ),
+            patch.object(
+                job_routes,
+                "JobEventListener",
+                return_value=FakeListener([JobNotification(job_id=JOB_ID, scope="task.updated", task_id=1)]),
+            ),
+        ):
+            response = await job_routes.stream_job_events(JOB_ID)
+            events = await collect_sse(response)
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["job.snapshot", "task.updated", "job.progress", "job.completed"],
+        )
+        self.assertEqual(events[1]["payload"]["task"]["status"], "failed")
+        self.assertEqual(events[1]["payload"]["task"]["attempt_count"], 3)
+        self.assertEqual(events[2]["payload"]["status"], "completed_with_failures")
+        self.assertEqual(events[3]["payload"]["counts"]["failed"], 1)

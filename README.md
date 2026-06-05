@@ -109,8 +109,9 @@ Backend verification:
 docker compose exec -T api python -m unittest discover -s /app/tests
 ```
 
-That suite now covers XML normalization, startup reconciliation, and Temporal
-activity retry/failure semantics.
+That suite now covers XML normalization, startup reconciliation, Temporal
+activity retry/failure semantics, and the DB-backed SSE notification/event
+contract.
 
 ## Next Slices
 

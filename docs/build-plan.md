@@ -78,6 +78,8 @@ backend behavior, and frontend workflow.
 - verified the frontend with a successful `pnpm build`
 - added direct backend coverage for Temporal activity success, permanent
   failure, retryable fetch failure, and terminal retry exhaustion behavior
+- added direct backend coverage for DB-mode SSE notification parsing and the
+  streamed projection event contract
 
 ### In Progress
 
@@ -123,7 +125,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `7` passing backend tests
+  now completes successfully with `11` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -180,6 +182,9 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_temporal_activities.py` now covers the real Temporal
   activity branch behavior for success, permanent HTTP failure, retryable
   transport failure, and terminal retry exhaustion.
+- `backend/tests/test_job_events.py` now covers Postgres job-notification
+  parsing plus the DB-mode SSE event stream contract for initial snapshots,
+  task deltas, progress updates, and terminal completion events.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
