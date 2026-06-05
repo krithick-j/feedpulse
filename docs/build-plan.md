@@ -38,7 +38,7 @@ backend behavior, and frontend workflow.
 - added async database session scaffolding and environment-based DB settings
 - added Alembic config and an initial migration matching the schema plan
 - added a repository seam for job/task persistence reads and idempotent creation
-- vendored the deduped 101-URL XML source manifest into the repo
+- checked the deduped 101-URL XML source list into backend code for job creation
 - added a backend mode switch so routes can run in `mock` or `database` mode
 - added backend and frontend Dockerfiles plus a first `docker-compose.yml`
 - added explicit backend boot scripts for migrations, API startup, and future worker startup
@@ -118,7 +118,7 @@ backend behavior, and frontend workflow.
 - `python3 -m py_compile` completed successfully for the backend scaffold files
 - `python3 -m py_compile` completed successfully for the new DB, Alembic, and
   repository files
-- the vendored `data/xml_sources.csv` contains 101 unique URLs
+- `backend/app/data/xml_sources.py` contains 101 unique source URLs
 - `docker compose config` completed successfully for `docker-compose.yml`
 - `python3 -m py_compile` completed successfully for the new simulator service
 - `docker compose config` completed successfully after promoting the Temporal-first local stack
@@ -139,7 +139,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `22` passing backend tests
+  now completes successfully with `23` passing backend tests
 - `docker compose exec -T api python /app/scripts/verify_live_runtime.py --base-url http://127.0.0.1:8000/api/v1`
   completed successfully against the live stack, producing job
   `14db7a61-a4c3-4558-ae9f-64af9f6e606d` with `100` completed tasks, `1`
@@ -180,8 +180,8 @@ backend behavior, and frontend workflow.
   `jobs`, `job_tasks`, `task_attempts`, `records`, plus native enums.
 - The API now supports two runtime backends:
   `mock` for demo behavior and `database` for repository-backed reads/writes.
-- Job creation in `database` mode uses the vendored deduped XML source manifest
-  from `data/xml_sources.csv` rather than a hardcoded demo URL catalog.
+- Job creation in `database` mode uses the provided deduped XML source list
+  from `backend/app/data/xml_sources.py` rather than a hardcoded demo URL catalog.
 - The default Compose stack now includes the Temporal server, Temporal UI, and
   small/large workers alongside `app-postgres`, `db-migrate`, `api`, and
   `frontend`, so local DB-mode startup is Temporal-first rather than

@@ -47,7 +47,6 @@ work is hardening and broadening those recovery rules further.
 
 ```text
 .
-├── data/
 ├── backend/
 ├── docs/
 └── frontend/
@@ -99,12 +98,12 @@ uvicorn app.main:app --reload
 
 Database configuration is defined in `backend/.env.example`. Alembic is scaffolded
 under `backend/alembic/`, with the initial schema in
-`backend/alembic/versions/20260604_0001_initial_schema.py`. The deduped XML
-source manifest used for job creation lives in `data/xml_sources.csv` and is
-loaded through `backend/app/data/source_manifest.py`. The Temporal activity path
-now uses `httpx`, `defusedxml`, and `feedparser` to turn fetched XML bytes into
-real `records` rows, while the simulator remains the fallback path. Temporal
-reconciliation cadence is controlled with
+`backend/alembic/versions/20260604_0001_initial_schema.py`. The provided XML
+source list used for job creation now lives in
+`backend/app/data/xml_sources.py`. The Temporal activity path uses `httpx`,
+`defusedxml`, and `feedparser` to turn fetched XML bytes into real `records`
+rows, while the simulator remains the fallback path. Temporal reconciliation
+cadence is controlled with
 `JOB_RECONCILIATION_INTERVAL_SECONDS`. The simulator runtime is disabled unless
 `ENABLE_SIMULATOR_RUNTIME=true`.
 

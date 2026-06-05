@@ -13,7 +13,7 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from app.core.settings import get_settings
 from app.data.mock_store import store
-from app.data.source_manifest import load_source_urls
+from app.data.xml_sources import load_source_urls
 from app.db.enums import TaskStatus as DbTaskStatus
 from app.db.notifications import JobEventListener
 from app.db.session import get_db_session

@@ -11,7 +11,6 @@ COPY backend/tests /app/tests
 COPY backend/alembic.ini /app/alembic.ini
 COPY backend/alembic /app/alembic
 COPY backend/scripts /app/scripts
-COPY data /app/data
 
 RUN pip install --no-cache-dir .
 RUN chmod +x /app/scripts/*.sh
