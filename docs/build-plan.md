@@ -92,6 +92,8 @@ backend behavior, and frontend workflow.
   and validates job completion plus extracted-record retrieval
 - added a live SSE smoke verifier that drives `/jobs/{id}/events` against the
   running stack and validates streaming progress/task/completion events
+- added a live failure-path verifier and fixed failed-task detail mapping for
+  real API inspection of error attempts
 
 ### In Progress
 
@@ -106,7 +108,8 @@ backend behavior, and frontend workflow.
 1. Promote push-based projection updates beyond the current single-channel
    notification seam.
 2. Add broader automated verification around the Temporal runtime path.
-3. Broaden the live runtime verifiers into more scenario-specific checks.
+3. Broaden the live runtime verifiers into more scenario-specific checks around
+   retries and multi-attempt tasks.
 
 ## Verification Notes
 
@@ -145,6 +148,10 @@ backend behavior, and frontend workflow.
   completed successfully against the live stack, producing job
   `d5ecdcff-2aa3-4b4b-9552-ddc2d359d534` with `204` progress events,
   `202` task update events, and a terminal `completed_with_failures` SSE flow
+- `docker compose exec -T api python /app/scripts/verify_live_failures.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack, producing job
+  `7e03577c-e38a-49f4-a88c-05b01e337b4b` and verifying failed task `633`
+  returns attempt/error metadata with `HttpClientError` and HTTP `403`
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -228,6 +235,11 @@ backend behavior, and frontend workflow.
 - `backend/scripts/verify_live_sse.py` now provides a live SSE verifier for the
   running `/events` path, including initial snapshot, progress/task updates,
   and terminal completion flow checks.
+- `backend/scripts/verify_live_failures.py` now provides a live failure-path
+  verifier for failed-task listing, task detail, and attempt/error inspection.
+- `backend/tests/test_repository_task_detail.py` now guards the failed-task
+  detail mapping path that previously crashed with duplicate `attempts`
+  arguments.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.

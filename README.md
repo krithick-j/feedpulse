@@ -126,6 +126,12 @@ Live SSE smoke verification:
 docker compose exec -T api python /app/scripts/verify_live_sse.py --base-url http://127.0.0.1:8000/api/v1
 ```
 
+Live failure-path verification:
+
+```bash
+docker compose exec -T api python /app/scripts/verify_live_failures.py --base-url http://127.0.0.1:8000/api/v1
+```
+
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
@@ -134,10 +140,12 @@ broader reconciliation branch coverage. The live smoke verifier runs against the
 actual Temporal-first stack and asserts job start, terminal completion, task
 results, and record retrieval through the API. The SSE verifier runs against the
 same live stack and asserts `job.snapshot`, streaming progress/task updates, and
-terminal `job.completed` behavior through `/events`.
+terminal `job.completed` behavior through `/events`. The failure-path verifier
+asserts that failed-task listing, task detail, and attempt/error metadata are
+available through the live API.
 
 ## Next Slices
 
 1. Broaden Temporal recovery and retry coverage beyond the currently verified reconciliation branches.
 2. Broaden the live smoke verifiers into more scenario-specific runtime checks.
-3. Add deeper operator-facing verification around failure inspection and retry visibility.
+3. Add deeper operator-facing verification around retry visibility and multi-attempt task detail.

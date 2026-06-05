@@ -145,7 +145,7 @@ class JobRepository:
         )
 
         return TaskDetail(
-            **self._map_task_detail_stub(task).model_dump(),
+            **self._map_task_summary(task).model_dump(),
             attempts=[
                 TaskAttemptSchema(
                     attempt_number=attempt.attempt_number,
