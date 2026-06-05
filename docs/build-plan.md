@@ -101,6 +101,8 @@ backend behavior, and frontend workflow.
 - added Temporal UI shortcut links in the dashboard/detail views so
   orchestration inspection stays in Temporal rather than expanding app-local
   retry controls
+- fixed the job-start request contract so the backend accepts the frontend's
+  camelCase `idempotencyKey`, and added live verification for duplicate POST reuse
 
 ### In Progress
 
@@ -146,7 +148,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `23` passing backend tests
+  now completes successfully with `27` passing backend tests
 - `docker compose exec -T api python /app/scripts/verify_live_runtime.py --base-url http://127.0.0.1:8000/api/v1`
   completed successfully against the live stack, producing job
   `14db7a61-a4c3-4558-ae9f-64af9f6e606d` with `100` completed tasks, `1`
@@ -159,6 +161,13 @@ backend behavior, and frontend workflow.
   completed successfully against the live stack, producing job
   `7e03577c-e38a-49f4-a88c-05b01e337b4b` and verifying failed task `633`
   returns attempt/error metadata with `HttpClientError` and HTTP `403`
+- `backend/scripts/verify_live_idempotency.py` now verifies that repeated
+  `POST /jobs` calls with the same frontend-style `idempotencyKey` reuse the
+  same job id instead of creating duplicate jobs
+- `python3 backend/scripts/verify_live_idempotency.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack, reusing job
+  `df073dbe-9dcd-4c1e-ae1c-84b19749fe11` on the second POST with
+  `second_reused=true`
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -242,8 +251,9 @@ backend behavior, and frontend workflow.
   orchestration semantics: queue-specific activity scheduling on the success
   path and cleanup/finalization on the failure path.
 - `backend/tests/test_job_start_runtime.py` now covers DB runtime selection:
-  Temporal remains the default path, while the simulator requires explicit
-  enablement before it can be scheduled.
+  Temporal remains the default path, the simulator requires explicit
+  enablement before it can be scheduled, and reused job starts do not schedule
+  duplicate runtime work.
 - `backend/scripts/verify_live_runtime.py` now provides an end-to-end smoke
   verifier for the running API/runtime path, including job start, terminal
   polling, completed-task lookup, and extracted-record retrieval.

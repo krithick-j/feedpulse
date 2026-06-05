@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 JobStatus = Literal["pending", "running", "completed", "completed_with_failures", "failed"]
 TaskStatus = Literal["pending", "in_progress", "completed", "failed"]
@@ -76,7 +76,10 @@ class JobDetail(JobSummary):
 
 
 class StartJobRequest(BaseModel):
-    idempotency_key: Optional[str] = None
+    idempotency_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("idempotency_key", "idempotencyKey"),
+    )
 
 
 class StartJobResponse(BaseModel):

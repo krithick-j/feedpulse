@@ -132,6 +132,12 @@ Live failure-path verification:
 docker compose exec -T api python /app/scripts/verify_live_failures.py --base-url http://127.0.0.1:8000/api/v1
 ```
 
+Live idempotency verification:
+
+```bash
+docker compose exec -T api python /app/scripts/verify_live_idempotency.py --base-url http://127.0.0.1:8000/api/v1
+```
+
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
@@ -142,7 +148,9 @@ results, and record retrieval through the API. The SSE verifier runs against the
 same live stack and asserts `job.snapshot`, streaming progress/task updates, and
 terminal `job.completed` behavior through `/events`. The failure-path verifier
 asserts that failed-task listing, task detail, and attempt/error metadata are
-available through the live API.
+available through the live API. The idempotency verifier asserts that repeating
+`POST /jobs` with the same frontend-style `idempotencyKey` reuses the original
+job instead of creating a second run.
 
 ## Next Slices
 

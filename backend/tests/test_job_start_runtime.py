@@ -7,13 +7,18 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 
 from app.api.routes import jobs as job_routes
-from app.schemas.jobs import StartJobResponse
+from app.schemas.jobs import StartJobRequest, StartJobResponse
 
 
 JOB_ID = "11111111-1111-4111-8111-111111111111"
 
 
 class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    def test_start_job_request_accepts_camel_case_idempotency_key(self) -> None:
+        payload = StartJobRequest.model_validate({"idempotencyKey": "ui-123"})
+
+        self.assertEqual(payload.idempotency_key, "ui-123")
+
     async def test_start_job_rejects_simulator_when_not_explicitly_enabled(self) -> None:
         response = StartJobResponse(job_id=JOB_ID, reused=False)
 
@@ -83,4 +88,28 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.job_id, JOB_ID)
         temporal_mock.assert_awaited_once()
+        simulator_mock.assert_not_called()
+
+    async def test_start_job_does_not_schedule_when_repository_reuses_job(self) -> None:
+        response = StartJobResponse(job_id=JOB_ID, reused=True)
+
+        with (
+            patch.object(
+                job_routes,
+                "settings",
+                SimpleNamespace(
+                    data_backend="database",
+                    job_execution_backend="temporal",
+                    enable_simulator_runtime=False,
+                ),
+            ),
+            patch.object(job_routes, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_routes, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
+            patch.object(job_routes, "schedule_job_simulation") as simulator_mock,
+        ):
+            result = await job_routes.start_job(StartJobRequest(idempotency_key="ui-123"))
+
+        self.assertEqual(result.job_id, JOB_ID)
+        self.assertTrue(result.reused)
+        temporal_mock.assert_not_awaited()
         simulator_mock.assert_not_called()
