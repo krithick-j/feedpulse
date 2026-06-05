@@ -1,6 +1,6 @@
 import type { TaskStatus } from "../types/jobs";
 
-export type SortKey = "url" | "status" | "duration" | "records";
+export type SortKey = "url" | "status" | "duration" | "records" | "attempts";
 
 interface TaskFiltersProps {
   statusFilter: TaskStatus | "all";
@@ -35,9 +35,9 @@ export function TaskFilters({
           <option value="status">Status</option>
           <option value="duration">Duration</option>
           <option value="records">Records</option>
+          <option value="attempts">Attempts</option>
         </select>
       </label>
     </div>
   );
 }
-

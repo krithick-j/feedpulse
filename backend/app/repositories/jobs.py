@@ -619,6 +619,8 @@ class JobRepository:
             return (JobTask.duration_ms.desc().nullslast(), JobTask.url.asc())
         if sort_by == "records":
             return (JobTask.records_extracted.desc(), JobTask.url.asc())
+        if sort_by == "attempts":
+            return (JobTask.attempt_count.desc(), JobTask.url.asc())
         return (JobTask.url.asc(), JobTask.id.asc())
 
     async def _notify_job_event(

@@ -96,6 +96,8 @@ backend behavior, and frontend workflow.
   real API inspection of error attempts
 - upgraded the task detail UI so attempt drill-down shows retry count, attempt
   status, timestamps, duration, HTTP status, and failure detail
+- added retry-aware task list controls so operators can sort by attempts and
+  spot retried tasks directly in the table
 
 ### In Progress
 
@@ -165,6 +167,8 @@ backend behavior, and frontend workflow.
 - Task attempt cards now surface operator-facing retry detail instead of only a
   thin status line: retry count, started/finished timestamps, duration, HTTP
   status, and explicit failure blocks are visible in the sidebar.
+- The task table now exposes retries at a glance instead of burying them as a
+  plain number: operators can sort by attempts and see a retried marker in-row.
 - Extracted records now come from the dedicated `/tasks/:task_id/records`
   endpoint, which aligns the UI with the planned backend surface.
 - The task table now also reads from the dedicated `/jobs/:id/tasks` endpoint,

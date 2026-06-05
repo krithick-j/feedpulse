@@ -48,7 +48,16 @@ export function TaskTable({ jobId, tasks, selectedTaskId }: TaskTableProps) {
                 </td>
                 <td><StatusBadge status={task.status} /></td>
                 <td>{task.queue ?? "Waiting"}</td>
-                <td>{task.attemptCount}</td>
+                <td>
+                  <div className="attempt-count-cell">
+                    <span>{task.attemptCount}</span>
+                    {task.attemptCount > 1 && (
+                      <span className="retry-chip">
+                        +{task.attemptCount - 1} {task.attemptCount === 2 ? "retry" : "retries"}
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td>{task.recordsExtracted}</td>
                 <td>{task.durationMs ? `${task.durationMs} ms` : "..."}</td>
               </tr>
@@ -67,4 +76,3 @@ function formatError(status: TaskStatus, errorType: string | null, error: string
 
   return errorType ? `${errorType}: ${error}` : error;
 }
-

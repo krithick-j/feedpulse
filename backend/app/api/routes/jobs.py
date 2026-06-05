@@ -355,4 +355,6 @@ def _sort_mock_tasks(tasks: list[TaskSummary], sort_by: str) -> list[TaskSummary
         return sorted(tasks, key=lambda task: (-(task.duration_ms or -1), task.url))
     if sort_by == "records":
         return sorted(tasks, key=lambda task: (-task.records_extracted, task.url))
+    if sort_by == "attempts":
+        return sorted(tasks, key=lambda task: (-task.attempt_count, task.url))
     return sorted(tasks, key=lambda task: (task.url, task.id))

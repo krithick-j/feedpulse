@@ -41,7 +41,7 @@ export function createIdempotencyKey() {
 
 export interface TaskListQuery {
   status?: TaskStatus | "all";
-  sort?: "url" | "status" | "duration" | "records";
+  sort?: "url" | "status" | "duration" | "records" | "attempts";
 }
 
 function mapCounts(payload: any) {
@@ -237,6 +237,9 @@ function sortTasks(tasks: TaskSummary[], sortBy: NonNullable<TaskListQuery["sort
     }
     if (sortBy === "records") {
       return right.recordsExtracted - left.recordsExtracted || left.url.localeCompare(right.url);
+    }
+    if (sortBy === "attempts") {
+      return right.attemptCount - left.attemptCount || left.url.localeCompare(right.url);
     }
     return left.url.localeCompare(right.url) || left.id - right.id;
   });
