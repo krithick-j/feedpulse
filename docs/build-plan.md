@@ -86,6 +86,8 @@ backend behavior, and frontend workflow.
   background loop with configurable interval
 - reduced the simulator from implicit fallback behavior to an explicit opt-in
   runtime gate
+- broadened Temporal reconciliation to cover missing workflows, status-specific
+  closed workflows, and healthy no-op running cases
 
 ### In Progress
 
@@ -100,7 +102,8 @@ backend behavior, and frontend workflow.
 1. Promote push-based projection updates beyond the current single-channel
    notification seam.
 2. Add broader automated verification around the Temporal runtime path.
-3. Broaden workflow-recovery coverage beyond the current startup reconciliation pass.
+3. Broaden workflow-recovery coverage beyond the currently verified
+   reconciliation branches.
 
 ## Verification Notes
 
@@ -130,7 +133,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `19` passing backend tests
+  now completes successfully with `22` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -186,10 +189,16 @@ backend behavior, and frontend workflow.
   running, so stale Temporal/DB divergence is not limited to a one-time
   startup repair pass. The interval is controlled through
   `JOB_RECONCILIATION_INTERVAL_SECONDS`.
+- Closed Temporal workflows are now repaired with status-specific error types
+  such as `WorkflowTerminatedWithoutFinalization`, instead of collapsing every
+  closed-workflow case into one generic reconciliation error.
 - `backend/tests/test_xml_ingest.py` now verifies RSS/Atom normalization through
   the real ingest path, and `backend/tests/test_job_reconciler.py` covers the
   stale-job termination/repair flow plus reconciliation enablement and periodic
   loop behavior.
+- `backend/tests/test_job_reconciler.py` now also covers missing-workflow
+  repair, status-specific closed-workflow repair, and the no-op path for
+  healthy running workflows.
 - `backend/tests/test_temporal_activities.py` now covers the real Temporal
   activity branch behavior for success, permanent HTTP failure, retryable
   transport failure, and terminal retry exhaustion.

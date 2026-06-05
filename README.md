@@ -39,8 +39,9 @@ persisted thousands of extracted records into Postgres. Transient fetch failures
 now retry through Temporal attempts before becoming terminal. The API now
 reconciles stale `running` jobs against Temporal state on startup and through a
 periodic background loop, so activation failures are not limited to one-time
-repair on boot. The main remaining runtime work is hardening and broadening
-those recovery rules.
+repair on boot. Closed workflows are also reconciled with status-specific repair
+typing instead of one generic closed-workflow bucket. The main remaining runtime
+work is hardening and broadening those recovery rules further.
 
 ## Layout
 
@@ -116,10 +117,11 @@ docker compose exec -T api python -m unittest discover -s /app/tests
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
-reconciliation loop coverage, plus DB runtime selection/simulator gating.
+reconciliation loop coverage, plus DB runtime selection/simulator gating, plus
+broader reconciliation branch coverage.
 
 ## Next Slices
 
-1. Reduce the simulator to a narrow fallback/dev-only role.
-2. Broaden Temporal recovery and retry coverage beyond the current startup reconciliation path.
-3. Expand automated coverage around the Temporal runtime and notification-driven SSE path.
+1. Broaden Temporal recovery and retry coverage beyond the currently verified reconciliation branches.
+2. Expand automated coverage around the Temporal runtime and notification-driven SSE path.
+3. Add deeper end-to-end verification against the running Temporal-first stack.

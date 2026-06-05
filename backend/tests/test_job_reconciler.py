@@ -34,21 +34,30 @@ class FakeSessionContext:
 
 
 class RunningJobRepository:
-    def __init__(self, *_args, **_kwargs) -> None:
+    def __init__(
+        self,
+        *_args,
+        counts: JobCounts | None = None,
+        started_at: str | None = None,
+        **_kwargs,
+    ) -> None:
         self.failed_jobs: list[tuple[str, str, str]] = []
         self.finalized_jobs: list[str] = []
         self.job_id = "11111111-1111-4111-8111-111111111111"
+        self.counts = counts or JobCounts(pending=101, in_progress=0, completed=0, failed=0)
+        self.started_at = started_at or (
+            datetime.now(timezone.utc) - timedelta(minutes=5)
+        ).isoformat()
 
     async def list_running_jobs(self) -> list[JobSummary]:
-        old_started_at = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
         return [
             JobSummary(
                 id=self.job_id,
                 status="running",
                 total_urls=101,
-                counts=JobCounts(pending=101, in_progress=0, completed=0, failed=0),
-                created_at=old_started_at,
-                started_at=old_started_at,
+                counts=self.counts,
+                created_at=self.started_at,
+                started_at=self.started_at,
                 finished_at=None,
                 elapsed_ms=300000,
                 temporal_run_id="run-1",
@@ -65,13 +74,24 @@ class RunningJobRepository:
 
 
 class FakeHandle:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        status: WorkflowExecutionStatus = WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING,
+        history_length: int = 19,
+        describe_error: Exception | None = None,
+    ) -> None:
         self.terminated_reasons: list[str | None] = []
+        self.status = status
+        self.history_length = history_length
+        self.describe_error = describe_error
 
     async def describe(self):
+        if self.describe_error is not None:
+            raise self.describe_error
         return SimpleNamespace(
-            status=WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING,
-            history_length=19,
+            status=self.status,
+            history_length=self.history_length,
         )
 
     async def terminate(self, *args, reason: str | None = None, **_kwargs) -> None:
@@ -121,6 +141,84 @@ class JobReconcilerTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(repository.finalized_jobs, [job_id])
+
+    async def test_reconcile_running_jobs_repairs_missing_workflow(self) -> None:
+        job_id = "11111111-1111-4111-8111-111111111111"
+        repository = RunningJobRepository()
+        handle = FakeHandle(describe_error=RuntimeError("missing"))
+        client = FakeClient(handle)
+
+        with (
+            patch("app.services.job_reconciler.get_settings", return_value=FakeSettings()),
+            patch("app.services.job_reconciler.SessionLocal", return_value=FakeSessionContext(object())),
+            patch("app.services.job_reconciler.JobRepository", return_value=repository),
+            patch("app.services.job_reconciler.get_temporal_client", return_value=client),
+        ):
+            reconciled = await reconcile_running_jobs()
+
+        self.assertEqual(reconciled, 1)
+        self.assertEqual(
+            repository.failed_jobs,
+            [
+                (
+                    job_id,
+                    "WorkflowMissingError",
+                    "Temporal workflow was not found during reconciliation",
+                )
+            ],
+        )
+        self.assertEqual(repository.finalized_jobs, [job_id])
+
+    async def test_reconcile_running_jobs_repairs_closed_workflow_with_status_specific_error(self) -> None:
+        job_id = "11111111-1111-4111-8111-111111111111"
+        repository = RunningJobRepository()
+        handle = FakeHandle(
+            status=WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TERMINATED
+        )
+        client = FakeClient(handle)
+
+        with (
+            patch("app.services.job_reconciler.get_settings", return_value=FakeSettings()),
+            patch("app.services.job_reconciler.SessionLocal", return_value=FakeSessionContext(object())),
+            patch("app.services.job_reconciler.JobRepository", return_value=repository),
+            patch("app.services.job_reconciler.get_temporal_client", return_value=client),
+        ):
+            reconciled = await reconcile_running_jobs()
+
+        self.assertEqual(reconciled, 1)
+        self.assertEqual(
+            repository.failed_jobs,
+            [
+                (
+                    job_id,
+                    "WorkflowTerminatedWithoutFinalization",
+                    "Temporal workflow closed with status WORKFLOW_EXECUTION_STATUS_TERMINATED before DB finalization completed",
+                )
+            ],
+        )
+        self.assertEqual(repository.finalized_jobs, [job_id])
+
+    async def test_reconcile_running_jobs_leaves_progressing_running_workflow_untouched(self) -> None:
+        repository = RunningJobRepository(
+            counts=JobCounts(pending=80, in_progress=10, completed=11, failed=0)
+        )
+        handle = FakeHandle(
+            status=WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING,
+            history_length=80,
+        )
+        client = FakeClient(handle)
+
+        with (
+            patch("app.services.job_reconciler.get_settings", return_value=FakeSettings()),
+            patch("app.services.job_reconciler.SessionLocal", return_value=FakeSessionContext(object())),
+            patch("app.services.job_reconciler.JobRepository", return_value=repository),
+            patch("app.services.job_reconciler.get_temporal_client", return_value=client),
+        ):
+            reconciled = await reconcile_running_jobs()
+
+        self.assertEqual(reconciled, 0)
+        self.assertEqual(repository.failed_jobs, [])
+        self.assertEqual(repository.finalized_jobs, [])
 
     async def test_run_reconciliation_loop_runs_until_stop(self) -> None:
         stop_event = asyncio.Event()

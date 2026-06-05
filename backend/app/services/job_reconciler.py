@@ -53,10 +53,11 @@ async def reconcile_running_jobs() -> int:
 
         status_name = WorkflowExecutionStatus.Name(description.status)
         if description.status != WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING:
+            error_type, error_message = _closed_workflow_repair(status_name)
             await _repair_job(
                 job.id,
-                error_type="WorkflowClosedWithoutFinalization",
-                error_message=f"Temporal workflow closed with status {status_name}",
+                error_type=error_type,
+                error_message=error_message,
             )
             reconciled += 1
             continue
@@ -81,6 +82,16 @@ async def reconcile_running_jobs() -> int:
             reconciled += 1
 
     return reconciled
+
+
+def _closed_workflow_repair(status_name: str) -> tuple[str, str]:
+    status_suffix = status_name.removeprefix("WORKFLOW_EXECUTION_STATUS_")
+    normalized_suffix = status_suffix.title().replace("_", "")
+
+    return (
+        f"Workflow{normalized_suffix}WithoutFinalization",
+        f"Temporal workflow closed with status {status_name} before DB finalization completed",
+    )
 
 
 async def run_reconciliation_loop(
