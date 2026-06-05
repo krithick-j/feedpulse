@@ -36,10 +36,11 @@ The Temporal execution path now includes:
 That path has now been exercised against the local Compose runtime with a real
 job: one recent run completed with `99` successful feeds, `2` failed feeds, and
 persisted thousands of extracted records into Postgres. Transient fetch failures
-now retry through Temporal attempts before becoming terminal. The API startup
-path also now reconciles stale `running` jobs against Temporal state so
-activation failures do not strand old jobs forever. The main remaining runtime
-work is hardening and broadening those recovery rules.
+now retry through Temporal attempts before becoming terminal. The API now
+reconciles stale `running` jobs against Temporal state on startup and through a
+periodic background loop, so activation failures are not limited to one-time
+repair on boot. The main remaining runtime work is hardening and broadening
+those recovery rules.
 
 ## Layout
 
@@ -101,7 +102,9 @@ under `backend/alembic/`, with the initial schema in
 source manifest used for job creation lives in `data/xml_sources.csv` and is
 loaded through `backend/app/data/source_manifest.py`. The Temporal activity path
 now uses `httpx`, `defusedxml`, and `feedparser` to turn fetched XML bytes into
-real `records` rows, while the simulator remains the fallback path.
+real `records` rows, while the simulator remains the fallback path. Temporal
+reconciliation cadence is controlled with
+`JOB_RECONCILIATION_INTERVAL_SECONDS`.
 
 Backend verification:
 
@@ -111,7 +114,8 @@ docker compose exec -T api python -m unittest discover -s /app/tests
 
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
-contract, plus workflow-level orchestration and cleanup behavior.
+contract, plus workflow-level orchestration, cleanup behavior, and periodic
+reconciliation loop coverage.
 
 ## Next Slices
 

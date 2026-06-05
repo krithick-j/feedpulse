@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import unittest
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from temporalio.api.enums.v1 import WorkflowExecutionStatus
 
 from app.schemas.jobs import JobCounts, JobSummary
-from app.services.job_reconciler import reconcile_running_jobs
+from app.services.job_reconciler import reconcile_running_jobs, reconciliation_enabled, run_reconciliation_loop
 
 
 @dataclass
@@ -18,6 +19,7 @@ class FakeSettings:
     job_execution_backend: str = "temporal"
     job_reconciliation_grace_seconds: int = 60
     job_reconciliation_pending_history_limit: int = 25
+    job_reconciliation_interval_seconds: int = 60
 
 
 class FakeSessionContext:
@@ -119,3 +121,43 @@ class JobReconcilerTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self.assertEqual(repository.finalized_jobs, [job_id])
+
+    async def test_run_reconciliation_loop_runs_until_stop(self) -> None:
+        stop_event = asyncio.Event()
+        calls: list[str] = []
+
+        async def fake_reconcile() -> int:
+            calls.append("reconcile")
+            stop_event.set()
+            return 1
+
+        with (
+            patch("app.services.job_reconciler.get_settings", return_value=FakeSettings()),
+            patch("app.services.job_reconciler.reconcile_running_jobs", side_effect=fake_reconcile),
+        ):
+            await run_reconciliation_loop(stop_event=stop_event, interval_seconds=0.001)
+
+        self.assertEqual(calls, ["reconcile"])
+
+    async def test_run_reconciliation_loop_returns_when_reconciliation_disabled(self) -> None:
+        stop_event = unittest.mock.Mock()
+        stop_event.wait = AsyncMock()
+
+        with (
+            patch(
+                "app.services.job_reconciler.get_settings",
+                return_value=FakeSettings(data_backend="mock"),
+            ),
+            patch("app.services.job_reconciler.reconcile_running_jobs", new=AsyncMock()) as reconcile_mock,
+        ):
+            await run_reconciliation_loop(stop_event=stop_event, interval_seconds=0.001)
+
+        reconcile_mock.assert_not_awaited()
+        stop_event.wait.assert_not_awaited()
+
+    def test_reconciliation_enabled_requires_database_temporal_runtime(self) -> None:
+        self.assertTrue(reconciliation_enabled(FakeSettings()))
+        self.assertFalse(reconciliation_enabled(FakeSettings(data_backend="mock")))
+        self.assertFalse(
+            reconciliation_enabled(FakeSettings(job_execution_backend="simulator"))
+        )

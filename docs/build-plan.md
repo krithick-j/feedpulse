@@ -82,6 +82,8 @@ backend behavior, and frontend workflow.
   streamed projection event contract
 - added direct backend coverage for Temporal workflow orchestration, including
   per-task queue scheduling plus failure cleanup/finalization behavior
+- expanded Temporal reconciliation from startup-only repair to a periodic API
+  background loop with configurable interval
 
 ### In Progress
 
@@ -127,7 +129,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `13` passing backend tests
+  now completes successfully with `16` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -178,9 +180,14 @@ backend behavior, and frontend workflow.
   workflow state and force-repairs the specific "still running in Temporal but
   zero task progress after grace window" failure mode that surfaced during live
   validation.
+- The API now keeps a periodic reconciliation loop alive while the service is
+  running, so stale Temporal/DB divergence is not limited to a one-time
+  startup repair pass. The interval is controlled through
+  `JOB_RECONCILIATION_INTERVAL_SECONDS`.
 - `backend/tests/test_xml_ingest.py` now verifies RSS/Atom normalization through
   the real ingest path, and `backend/tests/test_job_reconciler.py` covers the
-  stale-job termination/repair flow.
+  stale-job termination/repair flow plus reconciliation enablement and periodic
+  loop behavior.
 - `backend/tests/test_temporal_activities.py` now covers the real Temporal
   activity branch behavior for success, permanent HTTP failure, retryable
   transport failure, and terminal retry exhaustion.

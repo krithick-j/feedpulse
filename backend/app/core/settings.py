@@ -38,6 +38,10 @@ class Settings(BaseSettings):
         default=25,
         alias="JOB_RECONCILIATION_PENDING_HISTORY_LIMIT",
     )
+    job_reconciliation_interval_seconds: int = Field(
+        default=60,
+        alias="JOB_RECONCILIATION_INTERVAL_SECONDS",
+    )
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -11,9 +12,17 @@ from app.repositories.jobs import JobRepository
 from app.temporal.client import get_temporal_client
 
 
+def reconciliation_enabled(settings=None) -> bool:
+    current_settings = settings or get_settings()
+    return (
+        current_settings.data_backend == "database"
+        and current_settings.job_execution_backend == "temporal"
+    )
+
+
 async def reconcile_running_jobs() -> int:
     settings = get_settings()
-    if settings.data_backend != "database" or settings.job_execution_backend != "temporal":
+    if not reconciliation_enabled(settings):
         return 0
 
     async with SessionLocal() as session:
@@ -72,6 +81,27 @@ async def reconcile_running_jobs() -> int:
             reconciled += 1
 
     return reconciled
+
+
+async def run_reconciliation_loop(
+    *,
+    stop_event: asyncio.Event,
+    interval_seconds: int | None = None,
+) -> None:
+    settings = get_settings()
+    if not reconciliation_enabled(settings):
+        return
+
+    interval = interval_seconds or settings.job_reconciliation_interval_seconds
+    if interval <= 0:
+        return
+
+    while True:
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+            return
+        except asyncio.TimeoutError:
+            await reconcile_running_jobs()
 
 
 async def _repair_job(job_id: str, *, error_type: str, error_message: str) -> None:
