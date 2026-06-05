@@ -94,6 +94,8 @@ backend behavior, and frontend workflow.
   running stack and validates streaming progress/task/completion events
 - added a live failure-path verifier and fixed failed-task detail mapping for
   real API inspection of error attempts
+- upgraded the task detail UI so attempt drill-down shows retry count, attempt
+  status, timestamps, duration, HTTP status, and failure detail
 
 ### In Progress
 
@@ -160,6 +162,9 @@ backend behavior, and frontend workflow.
   idempotency key.
 - The detail view includes summary cards, progress, sortable tasks, and attempt
   history.
+- Task attempt cards now surface operator-facing retry detail instead of only a
+  thin status line: retry count, started/finished timestamps, duration, HTTP
+  status, and explicit failure blocks are visible in the sidebar.
 - Extracted records now come from the dedicated `/tasks/:task_id/records`
   endpoint, which aligns the UI with the planned backend surface.
 - The task table now also reads from the dedicated `/jobs/:id/tasks` endpoint,

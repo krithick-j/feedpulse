@@ -344,6 +344,74 @@ th {
   font-weight: 700;
 }
 
+.retry-note {
+  margin: 0.4rem 0 0;
+  color: #ffd47f;
+  font-size: 0.92rem;
+}
+
+.attempt-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.attempt-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.attempt-running {
+  background: rgba(87, 148, 255, 0.18);
+  color: #9ac4ff;
+}
+
+.attempt-succeeded {
+  background: rgba(68, 196, 150, 0.18);
+  color: #8af0c3;
+}
+
+.attempt-failed {
+  background: rgba(255, 99, 99, 0.18);
+  color: #ffb0aa;
+}
+
+.attempt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.attempt-meta {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: rgba(4, 11, 22, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.attempt-meta-label {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.attempt-error {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .error-inline {
   margin: 0.35rem 0 0;
   color: #ffb1a0;
@@ -409,5 +477,13 @@ th {
   .detail-actions {
     flex-direction: column;
     align-items: start;
+  }
+
+  .attempt-header {
+    flex-direction: column;
+  }
+
+  .attempt-meta-grid {
+    grid-template-columns: 1fr;
   }
 }

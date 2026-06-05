@@ -7,7 +7,7 @@ import { type SortKey, TaskFilters } from "../components/TaskFilters";
 import { TaskTable } from "../components/TaskTable";
 import { useJobEvents } from "../hooks/useJobEvents";
 import { useJobDetail, useTaskDetail, useTaskList, useTaskRecords } from "../hooks/useJobs";
-import type { TaskStatus } from "../types/jobs";
+import type { TaskAttempt, TaskStatus } from "../types/jobs";
 
 export function JobDetailPage() {
   const { jobId, taskId } = useParams();
@@ -129,20 +129,52 @@ export function JobDetailPage() {
                 <p>
                   Queue: {taskQuery.data.queue ?? "Waiting"} | Attempts: {taskQuery.data.attemptCount}
                 </p>
+                {taskQuery.data.attemptCount > 1 && (
+                  <p className="retry-note">
+                    Task retried {taskQuery.data.attemptCount - 1} time{taskQuery.data.attemptCount === 2 ? "" : "s"} before the current terminal state.
+                  </p>
+                )}
               </div>
 
               <div className="attempt-list">
                 {taskQuery.data.attempts.map((attempt) => (
                   <article key={attempt.attemptNumber} className="attempt-card">
-                    <p className="metric-label">Attempt {attempt.attemptNumber}</p>
-                    <p className="attempt-status">{attempt.status}</p>
-                    <p className="row-subtle">
-                      {attempt.durationMs ? `${attempt.durationMs} ms` : "Still running"}
-                    </p>
+                    <div className="attempt-header">
+                      <div>
+                        <p className="metric-label">Attempt {attempt.attemptNumber}</p>
+                        <p className="attempt-status">{attemptStatusLabel(attempt)}</p>
+                      </div>
+                      <span className={`attempt-pill attempt-${attempt.status}`}>
+                        {attempt.status === "succeeded" ? "Success" : attempt.status === "running" ? "Running" : "Failed"}
+                      </span>
+                    </div>
+
+                    <div className="attempt-meta-grid">
+                      <div className="attempt-meta">
+                        <span className="attempt-meta-label">Started</span>
+                        <span>{formatTimestamp(attempt.startedAt)}</span>
+                      </div>
+                      <div className="attempt-meta">
+                        <span className="attempt-meta-label">Finished</span>
+                        <span>{formatTimestamp(attempt.finishedAt)}</span>
+                      </div>
+                      <div className="attempt-meta">
+                        <span className="attempt-meta-label">Duration</span>
+                        <span>{formatAttemptDuration(attempt)}</span>
+                      </div>
+                      <div className="attempt-meta">
+                        <span className="attempt-meta-label">HTTP</span>
+                        <span>{attempt.httpStatus ?? "N/A"}</span>
+                      </div>
+                    </div>
+
                     {attempt.errorMessage && (
-                      <p className="error-inline">
-                        {attempt.errorType}: {attempt.errorMessage}
-                      </p>
+                      <div className="attempt-error">
+                        <p className="metric-label">Failure Detail</p>
+                        <p className="error-inline">
+                          {attempt.errorType ?? "ExecutionError"}: {attempt.errorMessage}
+                        </p>
+                      </div>
                     )}
                   </article>
                 ))}
@@ -182,4 +214,43 @@ function formatDuration(value: number) {
   const minutes = Math.floor(value / 60_000);
   const seconds = Math.floor((value % 60_000) / 1000);
   return `${minutes}m ${seconds}s`;
+}
+
+function formatAttemptDuration(attempt: TaskAttempt) {
+  if (attempt.durationMs == null) {
+    return attempt.status === "running" ? "Still running" : "N/A";
+  }
+  if (attempt.durationMs < 1000) {
+    return `${attempt.durationMs} ms`;
+  }
+
+  const seconds = attempt.durationMs / 1000;
+  return `${seconds.toFixed(seconds >= 10 ? 1 : 2)} s`;
+}
+
+function formatTimestamp(value: string | null) {
+  if (!value) {
+    return "Pending";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value));
+}
+
+function attemptStatusLabel(attempt: TaskAttempt) {
+  if (attempt.status === "succeeded") {
+    return "Completed cleanly";
+  }
+  if (attempt.status === "running") {
+    return "In flight";
+  }
+  if (attempt.httpStatus) {
+    return `Failed with HTTP ${attempt.httpStatus}`;
+  }
+  return "Execution failed";
 }
