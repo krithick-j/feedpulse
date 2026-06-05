@@ -144,6 +144,12 @@ Live retry-path verification:
 docker compose exec -T api python /app/scripts/verify_live_retries.py --base-url http://127.0.0.1:8000/api/v1
 ```
 
+Live reconciliation verification:
+
+```bash
+docker compose exec -T api python /app/scripts/verify_live_reconciliation.py --base-url http://127.0.0.1:8000/api/v1
+```
+
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
@@ -159,7 +165,10 @@ available through the live API. The idempotency verifier asserts that repeating
 job instead of creating a second run. The retry-path verifier keeps launching
 real jobs only if recent persisted history does not already expose a
 multi-attempt task, then validates the attempt-sorted task listing plus the
-detailed retry history for that task.
+detailed retry history for that task. The reconciliation verifier forces a real
+workflow divergence by terminating a running workflow, then proves the live
+reconciler repairs the API read model to a terminal state with the expected
+workflow-derived error type.
 
 ## Next Slices
 

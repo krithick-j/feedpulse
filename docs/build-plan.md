@@ -112,6 +112,9 @@ backend behavior, and frontend workflow.
 - added a projection-refresh fallback on SSE listener timeout so missed
   notifications still converge to task/progress/completion events from the read
   model
+- added a live reconciliation verifier that terminates a running Temporal
+  workflow and proves the reconciler repairs the API read model to terminal
+  state with workflow-derived failure metadata
 
 ### In Progress
 
@@ -123,9 +126,9 @@ backend behavior, and frontend workflow.
 
 ### Next
 
-1. Add broader automated verification around the Temporal runtime path.
-2. Broaden the live runtime verifiers beyond the current retry and
-   multi-attempt task scenarios.
+1. Broaden the live runtime verifiers beyond the current retry,
+   reconciliation, and multi-attempt task scenarios.
+2. Add broader automated verification around the Temporal runtime path.
 3. Keep narrowing projection-update fanout and read-model invalidation costs as
    more live traffic paths are exercised.
 
@@ -194,6 +197,15 @@ backend behavior, and frontend workflow.
   completed successfully after the scoped-channel/fallback changes, producing
   job `d18b8520-4f2b-41e9-b3d1-60c26ff5ead2` with `101` task updates,
   `1` progress event, and terminal `completed_with_failures` delivery
+- `backend/scripts/verify_live_reconciliation.py` now verifies that a running
+  Temporal workflow can be terminated deliberately and then repaired into a
+  terminal API state with `WorkflowTerminatedWithoutFinalization` propagated
+  into failed task metadata
+- `docker compose exec -T api python /app/scripts/verify_live_reconciliation.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack, producing job
+  `f39fccb4-d32f-4476-afb9-ef24f110711c` with `6` completed tasks,
+  `95` failed tasks, `reconciled_count=1`, and failed task `1819` carrying
+  `WorkflowTerminatedWithoutFinalization`
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
