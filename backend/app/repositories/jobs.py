@@ -10,7 +10,7 @@ from sqlalchemy import Select, case, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.notifications import JOB_EVENTS_CHANNEL
+from app.db.notifications import JOB_EVENTS_CHANNEL, job_events_channel_for_job
 from app.db.enums import AttemptStatus, FeedType, JobStatus, TaskStatus
 from app.db.models import Job, JobTask, Record, TaskAttempt
 from app.schemas.jobs import (
@@ -634,10 +634,16 @@ class JobRepository:
         if task_id is not None:
             payload["task_id"] = task_id
 
-        await self.session.execute(
-            text("SELECT pg_notify(:channel, :payload)"),
-            {
-                "channel": JOB_EVENTS_CHANNEL,
-                "payload": json.dumps(payload),
-            },
+        serialized_payload = json.dumps(payload)
+        channels = (
+            JOB_EVENTS_CHANNEL,
+            job_events_channel_for_job(job_id),
         )
+        for channel in channels:
+            await self.session.execute(
+                text("SELECT pg_notify(:channel, :payload)"),
+                {
+                    "channel": channel,
+                    "payload": serialized_payload,
+                },
+            )

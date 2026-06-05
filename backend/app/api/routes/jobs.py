@@ -180,10 +180,6 @@ async def stream_job_events(job_id: str) -> StreamingResponse:
 
             while True:
                 notification = await listener.next_event(timeout=SSE_KEEPALIVE_SECONDS)
-                if notification is None:
-                    yield ": keepalive\n\n"
-                    continue
-
                 projection = await _with_repository(lambda repository: repository.get_job_projection(parsed_job_id))
                 if projection is None:
                     return
@@ -203,6 +199,9 @@ async def stream_job_events(job_id: str) -> StreamingResponse:
                 if _job_is_terminal(projection):
                     yield _encode_sse(_job_snapshot_payload(projection, "job.completed"))
                     return
+
+                if notification is None and not delta_events:
+                    yield ": keepalive\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 

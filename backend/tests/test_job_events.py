@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from app.api.routes import jobs as job_routes
-from app.db.notifications import JobNotification, _parse_job_notification
+from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
 from app.schemas.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
 
@@ -80,6 +80,20 @@ async def collect_sse(response) -> list[dict]:
 
 
 class JobNotificationTests(unittest.TestCase):
+    def test_job_events_channel_for_job_uses_uuid_hex_suffix(self) -> None:
+        self.assertEqual(
+            job_events_channel_for_job(JOB_ID),
+            f"{JOB_EVENTS_CHANNEL}_11111111111141118111111111111111",
+        )
+
+    def test_listener_uses_job_scoped_channel_when_job_id_is_provided(self) -> None:
+        listener = JobEventListener(job_id=JOB_ID)
+
+        self.assertEqual(
+            listener.channel,
+            f"{JOB_EVENTS_CHANNEL}_11111111111141118111111111111111",
+        )
+
     def test_parse_job_notification_accepts_valid_payload(self) -> None:
         payload = json.dumps(
             {
@@ -190,3 +204,49 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[1]["payload"]["task"]["attempt_count"], 3)
         self.assertEqual(events[2]["payload"]["status"], "completed_with_failures")
         self.assertEqual(events[3]["payload"]["counts"]["failed"], 1)
+
+    async def test_stream_job_events_reconciles_terminal_state_after_timeout_without_notification(self) -> None:
+        initial_projection = build_projection(
+            status="running",
+            counts=JobCounts(pending=1, in_progress=0, completed=0, failed=0),
+            task_status="pending",
+            attempt_count=0,
+            records_extracted=0,
+            elapsed_ms=100,
+        )
+        terminal_projection = build_projection(
+            status="completed_with_failures",
+            counts=JobCounts(pending=0, in_progress=0, completed=0, failed=1),
+            task_status="failed",
+            attempt_count=1,
+            records_extracted=0,
+            elapsed_ms=1800,
+        )
+
+        with (
+            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(
+                job_routes,
+                "_with_repository",
+                new=AsyncMock(
+                    side_effect=[
+                        initial_projection,
+                        initial_projection,
+                        terminal_projection,
+                    ]
+                ),
+            ),
+            patch.object(
+                job_routes,
+                "JobEventListener",
+                return_value=FakeListener([None]),
+            ),
+        ):
+            response = await job_routes.stream_job_events(JOB_ID)
+            events = await collect_sse(response)
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["job.snapshot", "task.updated", "job.progress", "job.completed"],
+        )
+        self.assertEqual(events[-1]["payload"]["status"], "completed_with_failures")

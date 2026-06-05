@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Optional
@@ -29,7 +30,7 @@ class JobEventListener:
         channel: str = JOB_EVENTS_CHANNEL,
     ) -> None:
         self.job_id = job_id
-        self.channel = channel
+        self.channel = job_events_channel_for_job(job_id) if job_id is not None else channel
         self._connection: Optional[asyncpg.Connection] = None
         self._queue: asyncio.Queue[JobNotification] = asyncio.Queue()
 
@@ -66,6 +67,14 @@ class JobEventListener:
             return
 
         self._queue.put_nowait(notification)
+
+
+def job_events_channel_for_job(job_id: str | uuid.UUID) -> str:
+    try:
+        normalized = uuid.UUID(str(job_id)).hex
+    except ValueError:
+        normalized = str(job_id).replace("-", "_")
+    return f"{JOB_EVENTS_CHANNEL}_{normalized}"
 
 
 def _asyncpg_dsn(database_url: str) -> str:

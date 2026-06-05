@@ -106,6 +106,12 @@ backend behavior, and frontend workflow.
 - added a live retry-path verifier that waits for a real multi-attempt task and
   validates attempt-sorted task listing plus detailed retry history through the
   API
+- moved DB-mode SSE off a purely shared Postgres notify channel by publishing
+  job events to both the global channel and a job-scoped channel, with stream
+  listeners subscribing to the scoped path
+- added a projection-refresh fallback on SSE listener timeout so missed
+  notifications still converge to task/progress/completion events from the read
+  model
 
 ### In Progress
 
@@ -117,11 +123,11 @@ backend behavior, and frontend workflow.
 
 ### Next
 
-1. Promote push-based projection updates beyond the current single-channel
-   notification seam.
-2. Add broader automated verification around the Temporal runtime path.
-3. Broaden the live runtime verifiers beyond the current retry and
+1. Add broader automated verification around the Temporal runtime path.
+2. Broaden the live runtime verifiers beyond the current retry and
    multi-attempt task scenarios.
+3. Keep narrowing projection-update fanout and read-model invalidation costs as
+   more live traffic paths are exercised.
 
 ## Verification Notes
 
@@ -181,6 +187,13 @@ backend behavior, and frontend workflow.
   `b0f65a71-9875-421f-bc87-8d9fd361fdbb`, verifying retried task `928` with
   `attempt_count=2`, `first_attempt_status=failed`, and
   `final_attempt_status=succeeded`
+- job-event notification fanout now includes a job-scoped Postgres channel in
+  addition to the existing global channel, so SSE listeners no longer wake on
+  every unrelated job update before filtering
+- `docker compose exec -T api python /app/scripts/verify_live_sse.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully after the scoped-channel/fallback changes, producing
+  job `d18b8520-4f2b-41e9-b3d1-60c26ff5ead2` with `101` task updates,
+  `1` progress event, and terminal `completed_with_failures` delivery
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
