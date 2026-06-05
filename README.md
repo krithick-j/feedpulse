@@ -87,7 +87,8 @@ pnpm dev
 
 The dashboard defaults to mock transport. To point it at the FastAPI scaffold,
 create `frontend/.env` from `frontend/.env.example` and set
-`VITE_USE_MOCK_DATA=false`.
+`VITE_USE_MOCK_DATA=false`. `VITE_TEMPORAL_UI_BASE_URL` controls the shortcut
+links that open Temporal UI from the dashboard and job detail views.
 
 ## Backend Workflow
 

@@ -98,6 +98,9 @@ backend behavior, and frontend workflow.
   status, timestamps, duration, HTTP status, and failure detail
 - added retry-aware task list controls so operators can sort by attempts and
   spot retried tasks directly in the table
+- added Temporal UI shortcut links in the dashboard/detail views so
+  orchestration inspection stays in Temporal rather than expanding app-local
+  retry controls
 
 ### In Progress
 
@@ -169,6 +172,9 @@ backend behavior, and frontend workflow.
   status, and explicit failure blocks are visible in the sidebar.
 - The task table now exposes retries at a glance instead of burying them as a
   plain number: operators can sort by attempts and see a retried marker in-row.
+- The dashboard and job detail views now link out to Temporal UI using the
+  configured frontend base URL, while also showing the workflow id and run id
+  explicitly in the app read model.
 - Extracted records now come from the dedicated `/tasks/:task_id/records`
   endpoint, which aligns the UI with the planned backend surface.
 - The task table now also reads from the dedicated `/jobs/:id/tasks` endpoint,

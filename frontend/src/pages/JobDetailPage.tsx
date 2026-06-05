@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { TEMPORAL_UI_BASE_URL } from "../api/client";
 import { MetricCard } from "../components/MetricCard";
 import { ProgressBar } from "../components/ProgressBar";
 import { StatusBadge } from "../components/StatusBadge";
@@ -49,6 +50,16 @@ export function JobDetailPage() {
 
           <div className="detail-actions">
             <StatusBadge status={job.status} />
+            {job.temporalRunId && (
+              <a
+                className="secondary-link"
+                href={TEMPORAL_UI_BASE_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Temporal UI
+              </a>
+            )}
             <Link className="secondary-link" to="/">Back to jobs</Link>
           </div>
         </div>
@@ -78,7 +89,13 @@ export function JobDetailPage() {
           <MetricCard
             label="Temporal"
             value={job.temporalRunId ?? "Pending"}
-            detail="Current run id for direct workflow inspection."
+            detail={(
+              <>
+                <span>Workflow: {job.id}</span>
+                <br />
+                <span>Use Temporal UI for orchestration inspection.</span>
+              </>
+            )}
           />
         </div>
       </section>

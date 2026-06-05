@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { createIdempotencyKey, startJob, USE_MOCK_DATA } from "../api/client";
+import { createIdempotencyKey, startJob, TEMPORAL_UI_BASE_URL, USE_MOCK_DATA } from "../api/client";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { useJobs } from "../hooks/useJobs";
@@ -106,7 +106,23 @@ export function DashboardPage() {
                       </p>
                     </td>
                     <td>{formatDuration(job.elapsedMs)}</td>
-                    <td>{job.temporalRunId ?? "Not started"}</td>
+                    <td>
+                      {job.temporalRunId ? (
+                        <a
+                          className="table-link"
+                          href={TEMPORAL_UI_BASE_URL}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {job.temporalRunId}
+                        </a>
+                      ) : (
+                        "Not started"
+                      )}
+                      {job.temporalRunId && (
+                        <p className="row-subtle">Workflow: {job.id}</p>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -123,4 +139,3 @@ function formatDuration(value: number) {
   const seconds = Math.floor((value % 60_000) / 1000);
   return `${minutes}m ${seconds}s`;
 }
-
