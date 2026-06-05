@@ -4,19 +4,15 @@ export type SortKey = "url" | "status" | "duration" | "records" | "attempts";
 
 interface TaskFiltersProps {
   statusFilter: TaskStatus | "all";
-  retriedOnly: boolean;
   sortKey: SortKey;
   onStatusFilterChange: (value: TaskStatus | "all") => void;
-  onRetriedOnlyChange: (value: boolean) => void;
   onSortKeyChange: (value: SortKey) => void;
 }
 
 export function TaskFilters({
   statusFilter,
-  retriedOnly,
   sortKey,
   onStatusFilterChange,
-  onRetriedOnlyChange,
   onSortKeyChange,
 }: TaskFiltersProps) {
   return (
@@ -41,18 +37,6 @@ export function TaskFilters({
           <option value="records">Records</option>
           <option value="attempts">Attempts</option>
         </select>
-      </label>
-
-      <label className="checkbox-filter">
-        <span>Retries</span>
-        <span className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={retriedOnly}
-            onChange={(event) => onRetriedOnlyChange(event.target.checked)}
-          />
-          <span>Retried only</span>
-        </span>
       </label>
     </div>
   );

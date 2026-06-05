@@ -12,7 +12,6 @@ import type { TaskAttempt, TaskStatus } from "../types/jobs";
 export function JobDetailPage() {
   const { jobId, taskId } = useParams();
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
-  const [retriedOnly, setRetriedOnly] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("url");
   const parsedTaskId = taskId ? Number(taskId) : undefined;
 
@@ -21,7 +20,6 @@ export function JobDetailPage() {
   const recordsQuery = useTaskRecords(jobId, parsedTaskId);
   const taskListQuery = useTaskList(jobId, {
     status: statusFilter,
-    retriedOnly,
     sort: sortKey,
   });
 
@@ -95,10 +93,8 @@ export function JobDetailPage() {
               </div>
               <TaskFilters
                 statusFilter={statusFilter}
-                retriedOnly={retriedOnly}
                 sortKey={sortKey}
                 onStatusFilterChange={setStatusFilter}
-                onRetriedOnlyChange={setRetriedOnly}
                 onSortKeyChange={setSortKey}
               />
             </div>

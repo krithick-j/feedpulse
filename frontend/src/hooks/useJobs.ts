@@ -34,7 +34,7 @@ export function useTaskRecords(jobId: string | undefined, taskId: number | undef
 
 export function useTaskList(jobId: string | undefined, query: TaskListQuery) {
   return useQuery({
-    queryKey: ["jobs", jobId, "tasks", "list", query.status ?? "all", query.retriedOnly ? "retried" : "all-attempts", query.sort ?? "url"],
+    queryKey: ["jobs", jobId, "tasks", "list", query.status ?? "all", query.sort ?? "url"],
     queryFn: () => listTasks(jobId!, query),
     enabled: Boolean(jobId),
   });

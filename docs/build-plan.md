@@ -98,8 +98,6 @@ backend behavior, and frontend workflow.
   status, timestamps, duration, HTTP status, and failure detail
 - added retry-aware task list controls so operators can sort by attempts and
   spot retried tasks directly in the table
-- added a retried-only task filter path across API, mock data, and the UI so
-  operators can isolate multi-attempt work without leaving the job view
 
 ### In Progress
 
@@ -171,8 +169,6 @@ backend behavior, and frontend workflow.
   status, and explicit failure blocks are visible in the sidebar.
 - The task table now exposes retries at a glance instead of burying them as a
   plain number: operators can sort by attempts and see a retried marker in-row.
-- The task view now also supports a retried-only filter in both mock and live
-  modes, which makes multi-attempt tasks a first-class operator slice.
 - Extracted records now come from the dedicated `/tasks/:task_id/records`
   endpoint, which aligns the UI with the planned backend surface.
 - The task table now also reads from the dedicated `/jobs/:id/tasks` endpoint,
@@ -236,8 +232,6 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_job_events.py` now covers Postgres job-notification
   parsing plus the DB-mode SSE event stream contract for initial snapshots,
   task deltas, progress updates, and terminal completion events.
-- `backend/tests/test_task_list_filters.py` now covers the retried-only task
-  filter path in mock mode and the repository call contract in database mode.
 - `backend/tests/test_temporal_workflows.py` now covers workflow-level
   orchestration semantics: queue-specific activity scheduling on the success
   path and cleanup/finalization on the failure path.
