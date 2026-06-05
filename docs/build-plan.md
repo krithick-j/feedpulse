@@ -80,6 +80,8 @@ backend behavior, and frontend workflow.
   failure, retryable fetch failure, and terminal retry exhaustion behavior
 - added direct backend coverage for DB-mode SSE notification parsing and the
   streamed projection event contract
+- added direct backend coverage for Temporal workflow orchestration, including
+  per-task queue scheduling plus failure cleanup/finalization behavior
 
 ### In Progress
 
@@ -125,7 +127,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `11` passing backend tests
+  now completes successfully with `13` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -185,6 +187,9 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_job_events.py` now covers Postgres job-notification
   parsing plus the DB-mode SSE event stream contract for initial snapshots,
   task deltas, progress updates, and terminal completion events.
+- `backend/tests/test_temporal_workflows.py` now covers workflow-level
+  orchestration semantics: queue-specific activity scheduling on the success
+  path and cleanup/finalization on the failure path.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.

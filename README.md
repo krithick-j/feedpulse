@@ -111,7 +111,7 @@ docker compose exec -T api python -m unittest discover -s /app/tests
 
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
-contract.
+contract, plus workflow-level orchestration and cleanup behavior.
 
 ## Next Slices
 
