@@ -138,6 +138,12 @@ Live idempotency verification:
 docker compose exec -T api python /app/scripts/verify_live_idempotency.py --base-url http://127.0.0.1:8000/api/v1
 ```
 
+Live retry-path verification:
+
+```bash
+docker compose exec -T api python /app/scripts/verify_live_retries.py --base-url http://127.0.0.1:8000/api/v1
+```
+
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
@@ -150,10 +156,13 @@ terminal `job.completed` behavior through `/events`. The failure-path verifier
 asserts that failed-task listing, task detail, and attempt/error metadata are
 available through the live API. The idempotency verifier asserts that repeating
 `POST /jobs` with the same frontend-style `idempotencyKey` reuses the original
-job instead of creating a second run.
+job instead of creating a second run. The retry-path verifier keeps launching
+real jobs only if recent persisted history does not already expose a
+multi-attempt task, then validates the attempt-sorted task listing plus the
+detailed retry history for that task.
 
 ## Next Slices
 
 1. Broaden Temporal recovery and retry coverage beyond the currently verified reconciliation branches.
 2. Broaden the live smoke verifiers into more scenario-specific runtime checks.
-3. Add deeper operator-facing verification around retry visibility and multi-attempt task detail.
+3. Add more live runtime coverage beyond the current retry and multi-attempt task scenarios.

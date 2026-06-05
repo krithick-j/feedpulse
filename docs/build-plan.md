@@ -103,6 +103,9 @@ backend behavior, and frontend workflow.
   retry controls
 - fixed the job-start request contract so the backend accepts the frontend's
   camelCase `idempotencyKey`, and added live verification for duplicate POST reuse
+- added a live retry-path verifier that waits for a real multi-attempt task and
+  validates attempt-sorted task listing plus detailed retry history through the
+  API
 
 ### In Progress
 
@@ -117,8 +120,8 @@ backend behavior, and frontend workflow.
 1. Promote push-based projection updates beyond the current single-channel
    notification seam.
 2. Add broader automated verification around the Temporal runtime path.
-3. Broaden the live runtime verifiers into more scenario-specific checks around
-   retries and multi-attempt tasks.
+3. Broaden the live runtime verifiers beyond the current retry and
+   multi-attempt task scenarios.
 
 ## Verification Notes
 
@@ -168,6 +171,16 @@ backend behavior, and frontend workflow.
   completed successfully against the live stack, reusing job
   `df073dbe-9dcd-4c1e-ae1c-84b19749fe11` on the second POST with
   `second_reused=true`
+- `backend/scripts/verify_live_retries.py` now verifies that the live stack
+  exposes a retried task through `/jobs/:id/tasks?sort=attempts` and that the
+  matching task-detail payload returns contiguous ordered attempts with a failed
+  precursor and terminal state alignment, scanning recent live history before
+  launching new jobs
+- `docker compose exec -T api python /app/scripts/verify_live_retries.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack by reusing persisted job
+  `b0f65a71-9875-421f-bc87-8d9fd361fdbb`, verifying retried task `928` with
+  `attempt_count=2`, `first_attempt_status=failed`, and
+  `final_attempt_status=succeeded`
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
