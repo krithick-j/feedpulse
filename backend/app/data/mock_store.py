@@ -61,29 +61,66 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _make_task(task_id: int, url: str, status: str) -> TaskDetail:
+def _make_task(task_id: int, url: str, status: str, retried: bool = False) -> TaskDetail:
     completed = status == "completed"
     failed = status == "failed"
 
-    attempts = [
-        TaskAttempt(
-            attempt_number=1,
-            status="failed" if failed else "succeeded" if completed else "running",
-            started_at="2026-06-04T06:11:00Z",
-            finished_at="2026-06-04T06:11:02Z" if completed or failed else None,
-            duration_ms=2100 if completed or failed else None,
-            http_status=403 if failed else None,
-            error_type="HttpClientError" if failed else None,
-            error_message="403 response while fetching feed" if failed else None,
-        )
-    ]
+    if failed:
+        attempts = [
+            TaskAttempt(
+                attempt_number=1,
+                status="failed",
+                started_at="2026-06-04T06:11:00Z",
+                finished_at="2026-06-04T06:11:02Z",
+                duration_ms=2100,
+                http_status=403,
+                error_type="HttpClientError",
+                error_message="403 response while fetching feed",
+            )
+        ]
+    elif retried:
+        attempts = [
+            TaskAttempt(
+                attempt_number=1,
+                status="failed",
+                started_at="2026-06-04T06:09:00Z",
+                finished_at="2026-06-04T06:09:01Z",
+                duration_ms=1200,
+                http_status=429,
+                error_type="FeedFetchError",
+                error_message="Timeout while fetching feed",
+            ),
+            TaskAttempt(
+                attempt_number=2,
+                status="succeeded" if completed else "running",
+                started_at="2026-06-04T06:11:00Z",
+                finished_at="2026-06-04T06:11:02Z" if completed else None,
+                duration_ms=2100 if completed else None,
+                http_status=None,
+                error_type=None,
+                error_message=None,
+            ),
+        ]
+    else:
+        attempts = [
+            TaskAttempt(
+                attempt_number=1,
+                status="succeeded" if completed else "running",
+                started_at="2026-06-04T06:11:00Z",
+                finished_at="2026-06-04T06:11:02Z" if completed else None,
+                duration_ms=2100 if completed else None,
+                http_status=None,
+                error_type=None,
+                error_message=None,
+            )
+        ]
 
     return TaskDetail(
         id=task_id,
         url=url,
         status=status,
         queue="xml-large-queue" if "youtube" in url else "xml-small-queue",
-        attempt_count=1,
+        attempt_count=len(attempts),
         records_extracted=6 + (task_id % 4) if completed else 0,
         duration_ms=1800 + task_id * 60 if completed else 2100 if failed else None,
         last_error="403 response while fetching feed" if failed else None,
@@ -141,7 +178,7 @@ class MockJobStore:
                 rerouted_tasks=3,
                 tasks=[
                     _make_task(1, _URLS[0], "completed"),
-                    _make_task(2, _URLS[1], "completed"),
+                    _make_task(2, _URLS[1], "completed", retried=True),
                     _make_task(3, _URLS[2], "completed"),
                     _make_task(4, _URLS[3], "completed"),
                     _make_task(5, _URLS[4], "failed"),
@@ -168,7 +205,7 @@ class MockJobStore:
                 throughput_per_minute=3.3,
                 rerouted_tasks=2,
                 tasks=[
-                    _make_task(index + 20, url, "failed" if index in (3, 8) else "completed")
+                    _make_task(index + 20, url, "failed" if index in (3, 8) else "completed", retried=index == 5)
                     for index, url in enumerate(_URLS)
                 ],
             ),

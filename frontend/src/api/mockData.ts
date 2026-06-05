@@ -48,7 +48,7 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function makeTask(id: number, url: string, status: TaskStatus): TaskDetail {
+function makeTask(id: number, url: string, status: TaskStatus, retried = false): TaskDetail {
   const completed = status === "completed";
   const failed = status === "failed";
   const attempts: TaskAttempt[] =
@@ -65,6 +65,29 @@ function makeTask(id: number, url: string, status: TaskStatus): TaskDetail {
             errorMessage: "403 response while fetching feed",
           },
         ]
+      : retried
+        ? [
+            {
+              attemptNumber: 1,
+              status: "failed",
+              startedAt: "2026-06-04T06:09:00Z",
+              finishedAt: "2026-06-04T06:09:01Z",
+              durationMs: 1200,
+              httpStatus: 429,
+              errorType: "FeedFetchError",
+              errorMessage: "Timeout while fetching feed",
+            },
+            {
+              attemptNumber: 2,
+              status: completed ? "succeeded" : "running",
+              startedAt: "2026-06-04T06:11:00Z",
+              finishedAt: completed ? "2026-06-04T06:11:02Z" : null,
+              durationMs: completed ? 1800 : null,
+              httpStatus: null,
+              errorType: null,
+              errorMessage: null,
+            },
+          ]
       : [
           {
             attemptNumber: 1,
@@ -116,7 +139,7 @@ const initialJobs: JobDetail[] = [
     reroutedTasks: 3,
     tasks: [
       makeTask(1, taskCatalog[0], "completed"),
-      makeTask(2, taskCatalog[1], "completed"),
+      makeTask(2, taskCatalog[1], "completed", true),
       makeTask(3, taskCatalog[2], "completed"),
       makeTask(4, taskCatalog[3], "completed"),
       makeTask(5, taskCatalog[4], "failed"),
@@ -148,7 +171,7 @@ const initialJobs: JobDetail[] = [
     throughputPerMinute: 3.3,
     reroutedTasks: 2,
     tasks: taskCatalog.map((url, index) =>
-      makeTask(index + 20, url, index === 3 || index === 8 ? "failed" : "completed"),
+      makeTask(index + 20, url, index === 3 || index === 8 ? "failed" : "completed", index === 5),
     ),
   },
 ];

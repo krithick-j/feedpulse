@@ -177,6 +177,7 @@ class JobRepository:
         job_id: uuid.UUID,
         *,
         status_filter: Optional[TaskStatus] = None,
+        retried_only: bool = False,
         sort_by: str = "url",
     ) -> Optional[list[TaskSummary]]:
         job_exists = await self.session.execute(
@@ -188,6 +189,8 @@ class JobRepository:
         statement = select(JobTask).where(JobTask.job_id == job_id)
         if status_filter is not None:
             statement = statement.where(JobTask.status == status_filter)
+        if retried_only:
+            statement = statement.where(JobTask.attempt_count > 1)
 
         statement = statement.order_by(*self._task_sort_clause(sort_by))
         result = await self.session.execute(statement)

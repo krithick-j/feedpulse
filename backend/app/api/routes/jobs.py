@@ -79,6 +79,7 @@ async def get_job(job_id: str) -> JobDetail:
 async def get_tasks(
     job_id: str,
     status_filter: Optional[str] = Query(default=None, alias="status"),
+    retried_only: bool = Query(default=False, alias="retried"),
     sort_by: str = Query(default="url", alias="sort"),
 ) -> List[TaskSummary]:
     if settings.data_backend == "mock":
@@ -87,6 +88,8 @@ async def get_tasks(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
         if status_filter is not None:
             tasks = [task for task in tasks if task.status == status_filter]
+        if retried_only:
+            tasks = [task for task in tasks if task.attempt_count > 1]
         tasks = _sort_mock_tasks(tasks, sort_by)
         return tasks
 
@@ -95,6 +98,7 @@ async def get_tasks(
         lambda repository: repository.list_task_summaries(
             _parse_job_id(job_id),
             status_filter=parsed_status_filter,
+            retried_only=retried_only,
             sort_by=sort_by,
         )
     )

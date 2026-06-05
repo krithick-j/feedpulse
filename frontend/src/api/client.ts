@@ -41,6 +41,7 @@ export function createIdempotencyKey() {
 
 export interface TaskListQuery {
   status?: TaskStatus | "all";
+  retriedOnly?: boolean;
   sort?: "url" | "status" | "duration" | "records" | "attempts";
 }
 
@@ -175,13 +176,17 @@ export async function listTasks(jobId: string, query: TaskListQuery = {}): Promi
   if (USE_MOCK_DATA) {
     const job = await getMockJob(jobId);
     const status = query.status && query.status !== "all" ? query.status : undefined;
-    const filtered = status ? job.tasks.filter((task) => task.status === status) : [...job.tasks];
+    const filtered = (status ? job.tasks.filter((task) => task.status === status) : [...job.tasks])
+      .filter((task) => !query.retriedOnly || task.attemptCount > 1);
     return sortTasks(filtered, query.sort ?? "url");
   }
 
   const params = new URLSearchParams();
   if (query.status && query.status !== "all") {
     params.set("status", query.status);
+  }
+  if (query.retriedOnly) {
+    params.set("retried", "true");
   }
   if (query.sort) {
     params.set("sort", query.sort);
