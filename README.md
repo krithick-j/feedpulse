@@ -23,7 +23,7 @@ backend modes:
 
 In `database` mode, the local Compose runtime now boots a Temporal-first execution
 path by default. The in-process simulator still exists as an explicit fallback,
-but it is no longer the intended primary DB-mode runtime.
+but it is now opt-in and no longer behaves like a peer default DB-mode runtime.
 
 The Temporal execution path now includes:
 
@@ -71,10 +71,10 @@ The default Compose stack now brings up the full local runtime:
 - `temporal-worker-large`
 
 If you need the older lighter-weight path for backend-only iteration, you can
-still force the simulator runtime:
+still force the simulator runtime explicitly:
 
 ```bash
-JOB_EXECUTION_BACKEND=simulator docker compose up --build
+JOB_EXECUTION_BACKEND=simulator ENABLE_SIMULATOR_RUNTIME=true docker compose up --build
 ```
 
 ## Frontend Workflow
@@ -104,7 +104,8 @@ loaded through `backend/app/data/source_manifest.py`. The Temporal activity path
 now uses `httpx`, `defusedxml`, and `feedparser` to turn fetched XML bytes into
 real `records` rows, while the simulator remains the fallback path. Temporal
 reconciliation cadence is controlled with
-`JOB_RECONCILIATION_INTERVAL_SECONDS`.
+`JOB_RECONCILIATION_INTERVAL_SECONDS`. The simulator runtime is disabled unless
+`ENABLE_SIMULATOR_RUNTIME=true`.
 
 Backend verification:
 
@@ -115,7 +116,7 @@ docker compose exec -T api python -m unittest discover -s /app/tests
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
-reconciliation loop coverage.
+reconciliation loop coverage, plus DB runtime selection/simulator gating.
 
 ## Next Slices
 

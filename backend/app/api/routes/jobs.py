@@ -56,6 +56,7 @@ async def start_job(
         if settings.job_execution_backend == "temporal":
             await _start_temporal_job(uuid.UUID(response.job_id))
         else:
+            _ensure_simulator_runtime_enabled()
             schedule_job_simulation(uuid.UUID(response.job_id))
     return response
 
@@ -326,6 +327,16 @@ def _workflow_run_id(handle: object) -> Optional[str]:
         if isinstance(value, str) and value:
             return value
     return None
+
+
+def _ensure_simulator_runtime_enabled() -> None:
+    if settings.enable_simulator_runtime:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Simulator runtime is disabled unless ENABLE_SIMULATOR_RUNTIME=true",
+    )
 
 
 def _parse_task_status_filter(value: Optional[str]) -> Optional[DbTaskStatus]:

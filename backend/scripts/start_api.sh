@@ -9,7 +9,7 @@ python /app/scripts/wait_for_tcp.py \
 
 if [ "${WAIT_FOR_TEMPORAL:-0}" = "1" ]; then
   :
-elif [ "${JOB_EXECUTION_BACKEND:-simulator}" = "temporal" ]; then
+elif [ "${JOB_EXECUTION_BACKEND:-temporal}" = "temporal" ]; then
   WAIT_FOR_TEMPORAL=1
 fi
 

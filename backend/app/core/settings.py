@@ -27,8 +27,12 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     data_backend: Literal["mock", "database"] = Field(default="mock", alias="DATA_BACKEND")
     job_execution_backend: Literal["simulator", "temporal"] = Field(
-        default="simulator",
+        default="temporal",
         alias="JOB_EXECUTION_BACKEND",
+    )
+    enable_simulator_runtime: bool = Field(
+        default=False,
+        alias="ENABLE_SIMULATOR_RUNTIME",
     )
     job_reconciliation_grace_seconds: int = Field(
         default=60,

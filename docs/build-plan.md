@@ -84,6 +84,8 @@ backend behavior, and frontend workflow.
   per-task queue scheduling plus failure cleanup/finalization behavior
 - expanded Temporal reconciliation from startup-only repair to a periodic API
   background loop with configurable interval
+- reduced the simulator from implicit fallback behavior to an explicit opt-in
+  runtime gate
 
 ### In Progress
 
@@ -95,11 +97,10 @@ backend behavior, and frontend workflow.
 
 ### Next
 
-1. Reduce the in-process simulator to an explicit fallback-only path.
-2. Promote push-based projection updates beyond the current single-channel
+1. Promote push-based projection updates beyond the current single-channel
    notification seam.
-3. Add broader automated verification around the Temporal runtime path.
-4. Broaden workflow-recovery coverage beyond the current startup reconciliation pass.
+2. Add broader automated verification around the Temporal runtime path.
+3. Broaden workflow-recovery coverage beyond the current startup reconciliation pass.
 
 ## Verification Notes
 
@@ -129,7 +130,7 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `16` passing backend tests
+  now completes successfully with `19` passing backend tests
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -165,7 +166,8 @@ backend behavior, and frontend workflow.
   `frontend`, so local DB-mode startup is Temporal-first rather than
   simulator-first.
 - In `database` mode, the in-process simulator still exists, but it is now an
-  explicit fallback path rather than the intended primary runtime.
+  explicit opt-in fallback path guarded by `ENABLE_SIMULATOR_RUNTIME=true`
+  rather than a peer default runtime.
 - A Temporal-backed path now exists as the main orchestration path:
   the API can start a workflow, workers can poll workflow/small/large task
   queues, and the default Compose stack wires those services together.
@@ -197,6 +199,9 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_temporal_workflows.py` now covers workflow-level
   orchestration semantics: queue-specific activity scheduling on the success
   path and cleanup/finalization on the failure path.
+- `backend/tests/test_job_start_runtime.py` now covers DB runtime selection:
+  Temporal remains the default path, while the simulator requires explicit
+  enablement before it can be scheduled.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.
