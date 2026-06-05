@@ -88,6 +88,8 @@ backend behavior, and frontend workflow.
   runtime gate
 - broadened Temporal reconciliation to cover missing workflows, status-specific
   closed workflows, and healthy no-op running cases
+- added a live runtime smoke verifier that drives the running API end to end
+  and validates job completion plus extracted-record retrieval
 
 ### In Progress
 
@@ -103,7 +105,7 @@ backend behavior, and frontend workflow.
    notification seam.
 2. Add broader automated verification around the Temporal runtime path.
 3. Broaden workflow-recovery coverage beyond the currently verified
-   reconciliation branches.
+   reconciliation branches and single smoke-run scenario.
 
 ## Verification Notes
 
@@ -134,6 +136,10 @@ backend behavior, and frontend workflow.
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
   now completes successfully with `22` passing backend tests
+- `docker compose exec -T api python /app/scripts/verify_live_runtime.py --base-url http://127.0.0.1:8000/api/v1`
+  completed successfully against the live stack, producing job
+  `14db7a61-a4c3-4558-ae9f-64af9f6e606d` with `100` completed tasks, `1`
+  failed task, and a verified completed task record fetch
 - TypeScript config was tightened to avoid emitting generated config artifacts
 
 ## UI Notes
@@ -211,6 +217,9 @@ backend behavior, and frontend workflow.
 - `backend/tests/test_job_start_runtime.py` now covers DB runtime selection:
   Temporal remains the default path, while the simulator requires explicit
   enablement before it can be scheduled.
+- `backend/scripts/verify_live_runtime.py` now provides an end-to-end smoke
+  verifier for the running API/runtime path, including job start, terminal
+  polling, completed-task lookup, and extracted-record retrieval.
 - The API now persists `temporal_run_id` when the Temporal client exposes it and
   treats duplicate workflow starts as a reusable condition rather than an
   unhandled orchestration error.

@@ -114,14 +114,22 @@ Backend verification:
 docker compose exec -T api python -m unittest discover -s /app/tests
 ```
 
+Live runtime smoke verification:
+
+```bash
+docker compose exec -T api python /app/scripts/verify_live_runtime.py --base-url http://127.0.0.1:8000/api/v1
+```
+
 That suite now covers XML normalization, startup reconciliation, Temporal
 activity retry/failure semantics, and the DB-backed SSE notification/event
 contract, plus workflow-level orchestration, cleanup behavior, and periodic
 reconciliation loop coverage, plus DB runtime selection/simulator gating, plus
-broader reconciliation branch coverage.
+broader reconciliation branch coverage. The live smoke verifier runs against the
+actual Temporal-first stack and asserts job start, terminal completion, task
+results, and record retrieval through the API.
 
 ## Next Slices
 
 1. Broaden Temporal recovery and retry coverage beyond the currently verified reconciliation branches.
 2. Expand automated coverage around the Temporal runtime and notification-driven SSE path.
-3. Add deeper end-to-end verification against the running Temporal-first stack.
+3. Broaden the live smoke verifier into more scenario-specific runtime checks.
