@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from app.api.handlers import jobs as job_handlers
-from app.services import jobs as job_service
+from app.services.jobs import events as job_service
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
 from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
@@ -142,7 +142,7 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
                 job_service,
-                "_with_repository",
+                "with_repository",
                 new=AsyncMock(side_effect=[terminal_projection, terminal_projection]),
             ),
             patch.object(job_service, "JobEventListener", return_value=FakeListener([])),
@@ -179,7 +179,7 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
                 job_service,
-                "_with_repository",
+                "with_repository",
                 new=AsyncMock(
                     side_effect=[
                         initial_projection,
@@ -228,7 +228,7 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
                 job_service,
-                "_with_repository",
+                "with_repository",
                 new=AsyncMock(
                     side_effect=[
                         initial_projection,

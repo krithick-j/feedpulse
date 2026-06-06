@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 
 from app.api.handlers import jobs as job_handlers
-from app.services import jobs as job_service
+from app.services.jobs import lifecycle as job_service
 from app.dto.jobs import StartJobRequest, StartJobResponse
 
 
@@ -33,7 +33,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "with_repository", new=AsyncMock(return_value=response)),
             patch.object(job_service, "schedule_job_simulation") as simulator_mock,
             patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
         ):
@@ -58,7 +58,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=True,
                 ),
             ),
-            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "with_repository", new=AsyncMock(return_value=response)),
             patch.object(job_service, "schedule_job_simulation") as simulator_mock,
             patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
         ):
@@ -81,7 +81,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "with_repository", new=AsyncMock(return_value=response)),
             patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
             patch.object(job_service, "schedule_job_simulation") as simulator_mock,
         ):
@@ -104,7 +104,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "with_repository", new=AsyncMock(return_value=response)),
             patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
             patch.object(job_service, "schedule_job_simulation") as simulator_mock,
         ):
