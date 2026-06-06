@@ -35,6 +35,18 @@ export function JobDetailPage() {
 
   useJobEvents(jobId, isJobLive(jobQuery.data?.status));
 
+  // Post-redirect notice is a transient toast: auto-dismiss so it doesn't
+  // linger (the ?started param stays in the URL for the page's lifetime).
+  const [showStartedNotice, setShowStartedNotice] = useState(Boolean(startedState));
+  useEffect(() => {
+    if (!startedState) {
+      return;
+    }
+    setShowStartedNotice(true);
+    const timer = window.setTimeout(() => setShowStartedNotice(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [startedState]);
+
   useEffect(() => {
     setRecordsOffset(0);
   }, [parsedTaskId]);
@@ -125,7 +137,7 @@ export function JobDetailPage() {
           />
         </div>
 
-        {startedState && (
+        {showStartedNotice && startedState && (
           <div className="notice-banner">
             {startedState === "reused"
               ? "Existing job reused for the submitted idempotency key."
