@@ -5,6 +5,8 @@ dashboard. A job starts immediately, fans out URL work through Temporal workers,
 persists attempts and extracted records in Postgres, and streams live progress to
 the UI over SSE.
 
+![Feedpulse architecture: browser ↔ FastAPI (REST + SSE), Temporal server + workflow/small/large workers fetching external feeds, App Postgres as source of truth and LISTEN/NOTIFY event bus](assets/architecture.png)
+
 ## What It Does
 
 - `POST /jobs` starts a new processing run and returns a `job_id` immediately
