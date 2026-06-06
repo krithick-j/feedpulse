@@ -17,7 +17,7 @@ from app.db.enums import TaskStatus as DbTaskStatus
 from app.db.notifications import JobEventListener
 from app.db.session import get_db_session
 from app.repositories.jobs import JobRepository
-from app.schemas.jobs import (
+from app.dto.jobs import (
     JobDetail,
     JobProjection,
     JobSummary,

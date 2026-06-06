@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.logging import log_event
 from app.db.enums import TaskStatus as DbTaskStatus
-from app.schemas.jobs import (
+from app.dto.jobs import (
     JobDetail,
     JobSummary,
     PaginatedExtractedRecords,

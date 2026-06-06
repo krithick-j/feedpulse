@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 from temporalio.api.enums.v1 import WorkflowExecutionStatus
 
-from app.schemas.jobs import JobCounts, JobSummary
+from app.dto.jobs import JobCounts, JobSummary
 from app.services.job_reconciler import reconcile_running_jobs, reconciliation_enabled, run_reconciliation_loop
 
 

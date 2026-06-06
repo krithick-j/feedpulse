@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, status
 from fastapi.responses import StreamingResponse
 
 from app.api.handlers import jobs as handlers
-from app.schemas.jobs import (
+from app.dto.jobs import (
     JobDetail,
     JobSummary,
     PaginatedExtractedRecords,

@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from app.schemas.jobs import (
+from app.dto.jobs import (
     ExtractedRecord,
     JobCounts,
     JobDetail,

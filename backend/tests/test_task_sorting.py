@@ -4,7 +4,7 @@ import unittest
 
 from app.services.jobs import _sort_mock_tasks
 from app.repositories.jobs import JobRepository
-from app.schemas.jobs import TaskSummary
+from app.dto.jobs import TaskSummary
 
 
 def make_task(*, task_id: int, url: str, attempt_count: int) -> TaskSummary:

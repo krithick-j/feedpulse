@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 from app.api.handlers import jobs as job_handlers
 from app.services import jobs as job_service
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
-from app.schemas.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
+from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
 
 JOB_ID = "11111111-1111-4111-8111-111111111111"

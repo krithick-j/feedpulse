@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from app.api.handlers import jobs as job_handlers
 from app.services import jobs as job_service
-from app.schemas.jobs import StartJobRequest, StartJobResponse
+from app.dto.jobs import StartJobRequest, StartJobResponse
 
 
 JOB_ID = "11111111-1111-4111-8111-111111111111"

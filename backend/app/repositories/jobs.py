@@ -15,7 +15,7 @@ from app.core.logging import log_event
 from app.db.notifications import JOB_EVENTS_CHANNEL, job_events_channel_for_job
 from app.db.enums import AttemptStatus, FeedType, JobStatus, TaskStatus
 from app.db.models import Job, JobTask, Record, TaskAttempt
-from app.schemas.jobs import (
+from app.dto.jobs import (
     ExtractedRecord,
     JobCounts,
     JobDetail,
