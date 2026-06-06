@@ -38,7 +38,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
       ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
-      DATA_BACKEND: database
       JOB_EXECUTION_BACKEND: ${JOB_EXECUTION_BACKEND:-temporal}
       WAIT_FOR_POSTGRES_HOST: app-postgres
       WAIT_FOR_POSTGRES_PORT: 5432
@@ -135,7 +134,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
       ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
-      DATA_BACKEND: database
       JOB_EXECUTION_BACKEND: temporal
       WAIT_FOR_POSTGRES_HOST: app-postgres
       WAIT_FOR_POSTGRES_PORT: 5432
@@ -163,7 +161,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
       ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
-      DATA_BACKEND: database
       JOB_EXECUTION_BACKEND: temporal
       WAIT_FOR_POSTGRES_HOST: app-postgres
       WAIT_FOR_POSTGRES_PORT: 5432
@@ -191,7 +188,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@app-postgres:5432/app
       ALEMBIC_DATABASE_URL: postgresql://app:app@app-postgres:5432/app
-      DATA_BACKEND: database
       JOB_EXECUTION_BACKEND: temporal
       WAIT_FOR_POSTGRES_HOST: app-postgres
       WAIT_FOR_POSTGRES_PORT: 5432

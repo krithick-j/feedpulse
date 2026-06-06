@@ -15,7 +15,6 @@ from app.services.job_reconciler import reconcile_running_jobs, reconciliation_e
 
 @dataclass
 class FakeSettings:
-    data_backend: str = "database"
     job_execution_backend: str = "temporal"
     job_reconciliation_grace_seconds: int = 60
     job_reconciliation_pending_history_limit: int = 25
@@ -244,7 +243,7 @@ class JobReconcilerTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch(
                 "app.services.job_reconciler.get_settings",
-                return_value=FakeSettings(data_backend="mock"),
+                return_value=FakeSettings(job_execution_backend="simulator"),
             ),
             patch("app.services.job_reconciler.reconcile_running_jobs", new=AsyncMock()) as reconcile_mock,
         ):
@@ -255,7 +254,7 @@ class JobReconcilerTests(unittest.IsolatedAsyncioTestCase):
 
     def test_reconciliation_enabled_requires_database_temporal_runtime(self) -> None:
         self.assertTrue(reconciliation_enabled(FakeSettings()))
-        self.assertFalse(reconciliation_enabled(FakeSettings(data_backend="mock")))
+        self.assertFalse(reconciliation_enabled(FakeSettings(job_execution_backend="simulator")))
         self.assertFalse(
             reconciliation_enabled(FakeSettings(job_execution_backend="simulator"))
         )

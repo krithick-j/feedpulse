@@ -25,7 +25,6 @@ class Settings(BaseSettings):
         alias="ALEMBIC_DATABASE_URL",
     )
     api_prefix: str = "/api/v1"
-    data_backend: Literal["mock", "database"] = Field(default="database", alias="DATA_BACKEND")
     job_execution_backend: Literal["simulator", "temporal"] = Field(
         default="temporal",
         alias="JOB_EXECUTION_BACKEND",

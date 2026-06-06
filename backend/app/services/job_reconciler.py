@@ -18,10 +18,7 @@ logger = logging.getLogger(__name__)
 
 def reconciliation_enabled(settings=None) -> bool:
     current_settings = settings or get_settings()
-    return (
-        current_settings.data_backend == "database"
-        and current_settings.job_execution_backend == "temporal"
-    )
+    return current_settings.job_execution_backend == "temporal"
 
 
 async def reconcile_running_jobs() -> int:
