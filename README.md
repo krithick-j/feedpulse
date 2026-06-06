@@ -109,6 +109,16 @@ Database write strategy:
 - extracted `records` are inserted through bulk SQLAlchemy Core statements
 - task-attempt and record writes are idempotent against DB constraints
 
+## Live Updates (SSE + Postgres LISTEN/NOTIFY)
+
+![Feedpulse live-update flow: Temporal workers pg_notify per-job channels, the API LISTENs and streams SSE to each browser tab](assets/sse-flow.png)
+
+Each job has its own Postgres channel (`job_events_<id>`). A Temporal worker
+`pg_notify`s on commit, which wakes only that job's SSE stream, which pushes
+`data:` frames to only that job's browser tab — so N parallel jobs stay
+isolated. The stream's `LISTEN` connection is torn down (`UNLISTEN` + close)
+when the job reaches a terminal state or the client disconnects.
+
 ## Frontend Design Decisions
 
 Real-time approach:
