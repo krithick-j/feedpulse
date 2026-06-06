@@ -18,7 +18,7 @@ from app.dto.jobs import (
     TaskDetail,
     TaskSummary,
 )
-from app.services.jobs import JobService, job_service
+from app.services.jobs import JobEventStream, JobService, job_event_stream, job_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,13 @@ class JobHandler:
     supply a stubbed one.
     """
 
-    def __init__(self, service: JobService = job_service) -> None:
+    def __init__(
+        self,
+        service: JobService = job_service,
+        events: JobEventStream = job_event_stream,
+    ) -> None:
         self._service = service
+        self._events = events
 
     async def list_jobs(self) -> List[JobSummary]:
         return await self._service.list_jobs()
@@ -90,13 +95,13 @@ class JobHandler:
         return records
 
     async def stream_job_events(self, job_id: str) -> StreamingResponse:
-        if not await self._service.job_event_stream_available(job_id):
+        if not await self._events.available(job_id):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
-        service = self._service
+        events = self._events
 
         async def event_stream() -> AsyncIterator[str]:
-            async for payload in service.job_event_stream(job_id):
+            async for payload in events.stream(job_id):
                 if payload is None:
                     yield ": keepalive\n\n"
                 else:
