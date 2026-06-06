@@ -103,3 +103,29 @@ class XmlIngestTests(unittest.TestCase):
             datetime(2026, 6, 3, 20, 0, tzinfo=timezone.utc),
         )
         self.assertEqual(record["extra"]["link_rel"], "alternate")
+
+
+class SummaryExcerptTests(unittest.TestCase):
+    def test_strips_html_tags_and_unescapes(self) -> None:
+        from app.services.xml_ingest import _summary_excerpt
+
+        raw = '<img src="x.jpg" /><p>Hello &amp; welcome</p><h2>News</h2>'
+        self.assertEqual(_summary_excerpt(raw), "Hello & welcome News")
+
+    def test_collapses_whitespace(self) -> None:
+        from app.services.xml_ingest import _summary_excerpt
+
+        self.assertEqual(_summary_excerpt("a\n\n  b   c"), "a b c")
+
+    def test_truncates_long_text_with_ellipsis(self) -> None:
+        from app.services.xml_ingest import SUMMARY_MAX_CHARS, _summary_excerpt
+
+        out = _summary_excerpt("word " * 200)
+        self.assertLessEqual(len(out), SUMMARY_MAX_CHARS + 1)
+        self.assertTrue(out.endswith("…"))
+
+    def test_none_and_empty(self) -> None:
+        from app.services.xml_ingest import _summary_excerpt
+
+        self.assertIsNone(_summary_excerpt(None))
+        self.assertIsNone(_summary_excerpt("<p></p>"))

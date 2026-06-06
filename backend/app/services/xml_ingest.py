@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import re
 from datetime import datetime, timezone
+from html import unescape
 from typing import Any
 from xml.etree.ElementTree import ParseError
 
@@ -195,6 +197,30 @@ def _preflight_xml(body: bytes) -> None:
         raise MalformedXmlError(str(exc) or "Malformed XML payload") from exc
 
 
+SUMMARY_MAX_CHARS = 320
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _summary_excerpt(value: str | None) -> str | None:
+    """Strip HTML and truncate the feed summary to a plain-text excerpt.
+
+    Feed summaries carry full HTML article bodies; serving them raw bloats the
+    payload and the browser DOM. Full content stays server-side in
+    extra.content_html. The excerpt is plain text only, so it can be rendered
+    as text without XSS risk.
+    """
+    if value is None:
+        return None
+    text = _HTML_TAG_RE.sub(" ", value)
+    text = unescape(text)
+    text = " ".join(text.split())
+    if not text:
+        return None
+    if len(text) > SUMMARY_MAX_CHARS:
+        text = text[:SUMMARY_MAX_CHARS].rstrip() + "…"
+    return text
+
+
 def _normalize_entry(
     entry,
     *,
@@ -210,7 +236,7 @@ def _normalize_entry(
         or _normalize_string(entry.get("dc_creator"))
         or fallback_author
     )
-    summary = (
+    summary = _summary_excerpt(
         _normalize_string(entry.get("summary"))
         or _normalize_string(entry.get("description"))
         or _normalize_string(entry.get("subtitle"))
