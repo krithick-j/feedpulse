@@ -8,6 +8,7 @@ import { type SortKey, TaskFilters } from "../components/TaskFilters";
 import { TaskTable } from "../components/TaskTable";
 import { useJobEvents } from "../hooks/useJobEvents";
 import { isJobLive } from "../lib/jobStatus";
+import { etaSeconds, formatEta, formatRatePerSecond, ratePerSecond } from "../lib/throughput";
 import { useJobDetail, useTaskDetail, useTaskList, useTaskRecords } from "../hooks/useJobs";
 import type { TaskAttempt, TaskStatus } from "../types/jobs";
 
@@ -90,8 +91,21 @@ export function JobDetailPage() {
           />
           <MetricCard
             label="Throughput"
-            value={`${job.throughputPerMinute}/min`}
-            detail="Completed and failed tasks normalized over elapsed time."
+            value={formatRatePerSecond(ratePerSecond(job.counts, job.elapsedMs))}
+            detail="Completed and failed tasks per second over elapsed time."
+          />
+          <MetricCard
+            label="Est. time left"
+            value={
+              isJobLive(job.status)
+                ? formatEta(etaSeconds(job.counts, job.totalUrls, job.elapsedMs))
+                : "Done"
+            }
+            detail={
+              isJobLive(job.status)
+                ? "Rough estimate at current rate; varies with retries and parallelism."
+                : "Job reached a terminal state."
+            }
           />
           <MetricCard
             label="Rerouted"
