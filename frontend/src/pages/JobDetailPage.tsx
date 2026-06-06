@@ -7,6 +7,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { type SortKey, TaskFilters } from "../components/TaskFilters";
 import { TaskTable } from "../components/TaskTable";
 import { useJobEvents } from "../hooks/useJobEvents";
+import { isJobLive } from "../lib/jobStatus";
 import { useJobDetail, useTaskDetail, useTaskList, useTaskRecords } from "../hooks/useJobs";
 import type { TaskAttempt, TaskStatus } from "../types/jobs";
 
@@ -31,7 +32,7 @@ export function JobDetailPage() {
     sort: sortKey,
   });
 
-  useJobEvents(jobId, jobQuery.data?.status === "running");
+  useJobEvents(jobId, isJobLive(jobQuery.data?.status));
 
   useEffect(() => {
     setRecordsOffset(0);
