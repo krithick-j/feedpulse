@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import { getMockEvents, normalizeJobEvent, USE_MOCK_DATA } from "../api/client";
+import { normalizeJobEvent } from "../api/client";
 import type { JobDetail, JobEvent, TaskDetail, TaskSummary } from "../types/jobs";
 
 // Patch the cached task-list rows in place across every filter/sort variant,
@@ -28,18 +28,6 @@ export function useJobEvents(jobId: string | undefined, enabled: boolean) {
   useEffect(() => {
     if (!jobId || !enabled) {
       return;
-    }
-
-    if (USE_MOCK_DATA) {
-      const timer = window.setInterval(() => {
-        const events = getMockEvents(jobId);
-
-        for (const event of events) {
-          applyEvent(queryClient, event);
-        }
-      }, 1800);
-
-      return () => window.clearInterval(timer);
     }
 
     const eventSource = new EventSource(

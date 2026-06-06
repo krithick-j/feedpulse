@@ -1,10 +1,3 @@
-import {
-  advanceMockJob,
-  getMockJob,
-  getMockTask,
-  listMockJobs,
-  startMockJob,
-} from "./mockData";
 import type {
   ExtractedRecord,
   JobDetail,
@@ -19,7 +12,6 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 export const TEMPORAL_UI_BASE_URL = import.meta.env.VITE_TEMPORAL_UI_BASE_URL ?? "http://localhost:8088";
-export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA !== "false";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -168,38 +160,19 @@ export function normalizeJobEvent(payload: any): JobEvent {
 }
 
 export async function listJobs(): Promise<JobSummary[]> {
-  if (USE_MOCK_DATA) {
-    return listMockJobs();
-  }
-
   const payload = await fetchJson<any[]>("/jobs");
   return payload.map(mapJobSummary);
 }
 
 export async function getJob(jobId: string): Promise<JobDetail> {
-  if (USE_MOCK_DATA) {
-    return getMockJob(jobId);
-  }
-
   return mapJobDetail(await fetchJson<any>(`/jobs/${jobId}`));
 }
 
 export async function getTask(jobId: string, taskId: number): Promise<TaskDetail> {
-  if (USE_MOCK_DATA) {
-    return getMockTask(jobId, taskId);
-  }
-
   return mapTaskDetail(await fetchJson<any>(`/jobs/${jobId}/tasks/${taskId}`));
 }
 
 export async function listTasks(jobId: string, query: TaskListQuery = {}): Promise<TaskSummary[]> {
-  if (USE_MOCK_DATA) {
-    const job = await getMockJob(jobId);
-    const status = query.status && query.status !== "all" ? query.status : undefined;
-    const filtered = status ? job.tasks.filter((task) => task.status === status) : [...job.tasks];
-    return sortTasks(filtered, query.sort ?? "url");
-  }
-
   const params = new URLSearchParams();
   if (query.status && query.status !== "all") {
     params.set("status", query.status);
@@ -217,20 +190,6 @@ export async function getTaskRecords(
   taskId: number,
   query: TaskRecordsQuery = {},
 ): Promise<PaginatedRecords> {
-  if (USE_MOCK_DATA) {
-    const task = await getMockTask(jobId, taskId);
-    const limit = query.limit ?? 20;
-    const offset = query.offset ?? 0;
-    const items = task.sampleRecords.slice(offset, offset + limit);
-    return {
-      items,
-      total: task.sampleRecords.length,
-      limit,
-      offset,
-      hasMore: offset + items.length < task.sampleRecords.length,
-    };
-  }
-
   const params = new URLSearchParams();
   if (query.limit != null) {
     params.set("limit", String(query.limit));
@@ -244,38 +203,8 @@ export async function getTaskRecords(
 }
 
 export async function startJob(idempotencyKey: string): Promise<StartJobResponse> {
-  if (USE_MOCK_DATA) {
-    return startMockJob(idempotencyKey);
-  }
-
   return mapStartJobResponse(await fetchJson<any>("/jobs", {
     method: "POST",
     body: JSON.stringify({ idempotencyKey }),
   }));
-}
-
-export function getMockEvents(jobId: string): JobEvent[] {
-  if (!USE_MOCK_DATA) {
-    return [];
-  }
-
-  return advanceMockJob(jobId);
-}
-
-function sortTasks(tasks: TaskSummary[], sortBy: NonNullable<TaskListQuery["sort"]>) {
-  return [...tasks].sort((left, right) => {
-    if (sortBy === "status") {
-      return left.status.localeCompare(right.status) || left.url.localeCompare(right.url);
-    }
-    if (sortBy === "duration") {
-      return (right.durationMs ?? -1) - (left.durationMs ?? -1) || left.url.localeCompare(right.url);
-    }
-    if (sortBy === "records") {
-      return right.recordsExtracted - left.recordsExtracted || left.url.localeCompare(right.url);
-    }
-    if (sortBy === "attempts") {
-      return right.attemptCount - left.attemptCount || left.url.localeCompare(right.url);
-    }
-    return left.url.localeCompare(right.url) || left.id - right.id;
-  });
 }
