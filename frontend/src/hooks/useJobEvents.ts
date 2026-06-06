@@ -3,6 +3,27 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { getMockEvents, normalizeJobEvent, USE_MOCK_DATA } from "../api/client";
 import type { JobDetail, JobEvent, TaskDetail, TaskSummary } from "../types/jobs";
 
+// Coalesce a burst of task.updated events into a single task-list refetch.
+// The list query is filter/sort-keyed so it can't be patched from a payload;
+// without debouncing, every event refetched /jobs/{id}/tasks.
+const TASK_LIST_REFETCH_DEBOUNCE_MS = 400;
+const taskListRefetchTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleTaskListRefetch(queryClient: QueryClient, jobId: string) {
+  const existing = taskListRefetchTimers.get(jobId);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  taskListRefetchTimers.set(
+    jobId,
+    setTimeout(() => {
+      taskListRefetchTimers.delete(jobId);
+      queryClient.invalidateQueries({ queryKey: ["jobs", jobId, "tasks", "list"] });
+    }, TASK_LIST_REFETCH_DEBOUNCE_MS),
+  );
+}
+
 function patchTaskInJob(job: JobDetail, nextTask: TaskSummary): JobDetail {
   return {
     ...job,
@@ -67,9 +88,7 @@ function applyEvent(queryClient: QueryClient, event: JobEvent) {
     // The task-list query is keyed by filter/sort and the records query holds
     // server-derived data the event payload doesn't carry, so those still need
     // a refetch. Both only refetch when actually mounted.
-    queryClient.invalidateQueries({
-      queryKey: ["jobs", event.payload.jobId, "tasks", "list"],
-    });
+    scheduleTaskListRefetch(queryClient, event.payload.jobId);
 
     queryClient.invalidateQueries({
       queryKey: ["jobs", event.payload.jobId, "tasks", event.payload.task.id, "records"],
