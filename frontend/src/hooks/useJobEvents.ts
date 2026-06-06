@@ -50,6 +50,7 @@ export function useJobEvents(jobId: string | undefined, enabled: boolean) {
 
 function applyEvent(queryClient: QueryClient, event: JobEvent) {
   if (event.type === "task.updated") {
+    // Patch caches directly from the event payload instead of refetching.
     queryClient.setQueryData<JobDetail | undefined>(["jobs", event.payload.jobId], (current) => {
       if (!current) {
         return current;
@@ -63,21 +64,23 @@ function applyEvent(queryClient: QueryClient, event: JobEvent) {
       (current) => (current ? { ...current, ...event.payload.task } : current),
     );
 
-    queryClient.invalidateQueries({
-      queryKey: ["jobs", event.payload.jobId, "tasks", event.payload.task.id, "records"],
-    });
-
+    // The task-list query is keyed by filter/sort and the records query holds
+    // server-derived data the event payload doesn't carry, so those still need
+    // a refetch. Both only refetch when actually mounted.
     queryClient.invalidateQueries({
       queryKey: ["jobs", event.payload.jobId, "tasks", "list"],
     });
 
     queryClient.invalidateQueries({
-      queryKey: ["jobs", event.payload.jobId],
+      queryKey: ["jobs", event.payload.jobId, "tasks", event.payload.task.id, "records"],
     });
 
     return;
   }
 
+  // Job-level snapshot/progress/completed: patch the detail cache from the
+  // payload. No invalidation — setQueryData already updated the only query
+  // that is mounted on this page.
   queryClient.setQueryData<JobDetail | undefined>(["jobs", event.payload.jobId], (current) => {
     if (!current) {
       return current;
@@ -94,13 +97,5 @@ function applyEvent(queryClient: QueryClient, event: JobEvent) {
           ? new Date().toISOString()
           : current.finishedAt,
     };
-  });
-
-  queryClient.invalidateQueries({
-    queryKey: ["jobs"],
-  });
-
-  queryClient.invalidateQueries({
-    queryKey: ["jobs", event.payload.jobId],
   });
 }
