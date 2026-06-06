@@ -8,7 +8,7 @@ from app.api.routes.jobs import router as jobs_router
 from app.core.logging import configure_json_logging
 from app.core.settings import get_settings
 from app.middleware import register_middleware
-from app.services.job_reconciler import reconcile_running_jobs, reconciliation_enabled, run_reconciliation_loop
+from app.services.job_reconciler import reconcile_running_jobs, run_reconciliation_loop
 
 configure_json_logging()
 
@@ -21,10 +21,7 @@ async def lifespan(_app: FastAPI):
 
     stop_event = asyncio.Event()
     reconciliation_task: asyncio.Task | None = None
-    if (
-        reconciliation_enabled(settings)
-        and settings.job_reconciliation_interval_seconds > 0
-    ):
+    if settings.job_reconciliation_interval_seconds > 0:
         reconciliation_task = asyncio.create_task(
             run_reconciliation_loop(
                 stop_event=stop_event,

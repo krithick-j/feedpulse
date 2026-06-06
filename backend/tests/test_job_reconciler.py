@@ -10,12 +10,11 @@ from unittest.mock import AsyncMock, patch
 from temporalio.api.enums.v1 import WorkflowExecutionStatus
 
 from app.dto.jobs import JobCounts, JobSummary
-from app.services.job_reconciler import reconcile_running_jobs, reconciliation_enabled, run_reconciliation_loop
+from app.services.job_reconciler import reconcile_running_jobs, run_reconciliation_loop
 
 
 @dataclass
 class FakeSettings:
-    job_execution_backend: str = "temporal"
     job_reconciliation_grace_seconds: int = 60
     job_reconciliation_pending_history_limit: int = 25
     job_reconciliation_interval_seconds: int = 60
@@ -235,26 +234,3 @@ class JobReconcilerTests(unittest.IsolatedAsyncioTestCase):
             await run_reconciliation_loop(stop_event=stop_event, interval_seconds=0.001)
 
         self.assertEqual(calls, ["reconcile"])
-
-    async def test_run_reconciliation_loop_returns_when_reconciliation_disabled(self) -> None:
-        stop_event = unittest.mock.Mock()
-        stop_event.wait = AsyncMock()
-
-        with (
-            patch(
-                "app.services.job_reconciler.get_settings",
-                return_value=FakeSettings(job_execution_backend="simulator"),
-            ),
-            patch("app.services.job_reconciler.reconcile_running_jobs", new=AsyncMock()) as reconcile_mock,
-        ):
-            await run_reconciliation_loop(stop_event=stop_event, interval_seconds=0.001)
-
-        reconcile_mock.assert_not_awaited()
-        stop_event.wait.assert_not_awaited()
-
-    def test_reconciliation_enabled_requires_database_temporal_runtime(self) -> None:
-        self.assertTrue(reconciliation_enabled(FakeSettings()))
-        self.assertFalse(reconciliation_enabled(FakeSettings(job_execution_backend="simulator")))
-        self.assertFalse(
-            reconciliation_enabled(FakeSettings(job_execution_backend="simulator"))
-        )

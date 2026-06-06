@@ -18,7 +18,7 @@ from app.dto.jobs import (
     TaskDetail,
     TaskSummary,
 )
-from app.services.jobs import JobService, SimulatorRuntimeDisabledError, job_service
+from app.services.jobs import JobService, job_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 class JobHandler:
     """Translates between HTTP concerns and the JobService.
 
-    Maps service results to HTTP outcomes (404 on missing, 422 on bad filter,
-    503 when the simulator is disabled) and builds the SSE response. The service
-    is injected (DIP) so tests can supply a stubbed one.
+    Maps service results to HTTP outcomes (404 on missing, 422 on bad filter)
+    and builds the SSE response. The service is injected (DIP) so tests can
+    supply a stubbed one.
     """
 
     def __init__(self, service: JobService = job_service) -> None:
@@ -39,13 +39,7 @@ class JobHandler:
 
     async def start_job(self, payload: Optional[StartJobRequest]) -> StartJobResponse:
         idempotency_key = payload.idempotency_key if payload else None
-        try:
-            return await self._service.start_job(idempotency_key)
-        except SimulatorRuntimeDisabledError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Simulator runtime is disabled unless ENABLE_SIMULATOR_RUNTIME=true",
-            ) from exc
+        return await self._service.start_job(idempotency_key)
 
     async def get_job(self, job_id: str) -> JobDetail:
         job = await self._service.get_job(job_id)

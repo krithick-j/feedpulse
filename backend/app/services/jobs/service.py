@@ -12,9 +12,8 @@ from app.dto.jobs import (
     TaskDetail,
     TaskSummary,
 )
-from app.services.job_simulator import schedule_job_simulation
 from app.services.jobs._common import with_repository
-from app.services.jobs.executor import SimulatorJobExecutor, TemporalJobExecutor
+from app.services.jobs.executor import TemporalJobExecutor
 from app.services.jobs.gateway import JobRepositoryGateway
 from app.services.jobs.launcher import JobLauncher
 from app.services.jobs.reader import JobReader
@@ -70,11 +69,7 @@ def build_job_service(
     """Composition root: wire the gateway, executor strategy, and services."""
     settings = settings or get_settings()
     gateway = JobRepositoryGateway(run_repository=run_repository)
-
-    if settings.job_execution_backend == "temporal":
-        executor = TemporalJobExecutor(settings=settings, run_repository=run_repository)
-    else:
-        executor = SimulatorJobExecutor(enabled=settings.enable_simulator_runtime)
+    executor = TemporalJobExecutor(settings=settings, run_repository=run_repository)
 
     return JobService(
         reader=JobReader(gateway),

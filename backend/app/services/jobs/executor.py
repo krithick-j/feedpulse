@@ -1,20 +1,14 @@
-"""Execution strategy: how a created job is actually run.
-
-The two real backends (Temporal, simulator) implement one interface, so the
-launcher picks an executor at composition time and never branches on config.
-"""
+"""Temporal execution: start the workflow for a created job."""
 from __future__ import annotations
 
 import logging
 import uuid
-from abc import ABC, abstractmethod
 from typing import Optional
 
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from app.core.logging import log_event
 from app.services.job_runtime import queue_for_url
-from app.services.job_simulator import schedule_job_simulation
 from app.services.jobs._common import with_repository
 from app.temporal.client import get_temporal_client
 from app.temporal.types import ProcessXmlJobInput, WorkflowTaskInput
@@ -23,27 +17,7 @@ from app.temporal.workflows import ProcessXmlJobWorkflow
 logger = logging.getLogger(__name__)
 
 
-class SimulatorRuntimeDisabledError(Exception):
-    """Raised when a job needs the simulator runtime but it is disabled."""
-
-
-class JobExecutor(ABC):
-    @abstractmethod
-    async def start(self, job_id: uuid.UUID) -> None: ...
-
-
-class SimulatorJobExecutor(JobExecutor):
-    def __init__(self, *, enabled: bool, schedule=schedule_job_simulation) -> None:
-        self._enabled = enabled
-        self._schedule = schedule
-
-    async def start(self, job_id: uuid.UUID) -> None:
-        if not self._enabled:
-            raise SimulatorRuntimeDisabledError
-        self._schedule(job_id)
-
-
-class TemporalJobExecutor(JobExecutor):
+class TemporalJobExecutor:
     def __init__(
         self,
         *,

@@ -16,15 +16,8 @@ from app.temporal.client import get_temporal_client
 logger = logging.getLogger(__name__)
 
 
-def reconciliation_enabled(settings=None) -> bool:
-    current_settings = settings or get_settings()
-    return current_settings.job_execution_backend == "temporal"
-
-
 async def reconcile_running_jobs() -> int:
     settings = get_settings()
-    if not reconciliation_enabled(settings):
-        return 0
 
     async with SessionLocal() as session:
         repository = JobRepository(session)
@@ -138,9 +131,6 @@ async def run_reconciliation_loop(
     interval_seconds: int | None = None,
 ) -> None:
     settings = get_settings()
-    if not reconciliation_enabled(settings):
-        return
-
     interval = interval_seconds or settings.job_reconciliation_interval_seconds
     if interval <= 0:
         return

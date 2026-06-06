@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,14 +24,6 @@ class Settings(BaseSettings):
         alias="ALEMBIC_DATABASE_URL",
     )
     api_prefix: str = "/api/v1"
-    job_execution_backend: Literal["simulator", "temporal"] = Field(
-        default="temporal",
-        alias="JOB_EXECUTION_BACKEND",
-    )
-    enable_simulator_runtime: bool = Field(
-        default=False,
-        alias="ENABLE_SIMULATOR_RUNTIME",
-    )
     job_reconciliation_grace_seconds: int = Field(
         default=60,
         alias="JOB_RECONCILIATION_GRACE_SECONDS",
