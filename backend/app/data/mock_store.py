@@ -14,6 +14,7 @@ from app.schemas.jobs import (
     JobProgressPayload,
     JobSnapshotEvent,
     JobSummary,
+    PaginatedExtractedRecords,
     StartJobResponse,
     TaskAttempt,
     TaskDetail,
@@ -239,6 +240,27 @@ class MockJobStore:
                 return copy.deepcopy(task)
 
         return None
+
+    def get_task_records(
+        self,
+        job_id: str,
+        task_id: int,
+        *,
+        limit: int,
+        offset: int,
+    ) -> Optional[PaginatedExtractedRecords]:
+        task = self.get_task(job_id, task_id)
+        if not task:
+            return None
+
+        items = task.sample_records[offset: offset + limit]
+        return PaginatedExtractedRecords(
+            items=items,
+            total=len(task.sample_records),
+            limit=limit,
+            offset=offset,
+            has_more=offset + len(items) < len(task.sample_records),
+        )
 
     def start_job(self, idempotency_key: Optional[str]) -> StartJobResponse:
         key = idempotency_key or "server-{0}".format(int(time.time() * 1000))

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
+from app.core.logging import log_event
 from app.db.session import SessionLocal
 from app.repositories.jobs import JobRepository
 from app.services.xml_ingest import FeedFetchError, HttpClientError, MalformedXmlError, OversizedResponseError, extract_feed_records
 from app.temporal.types import ProcessedTaskResult, URL_ACTIVITY_MAX_ATTEMPTS, WorkflowTaskInput
+
+logger = logging.getLogger(__name__)
 
 
 @activity.defn
@@ -24,6 +28,16 @@ async def process_single_url_activity(job_id: str, task: WorkflowTaskInput) -> P
     queue = task.queue
     attempt_number = activity.info().attempt
     started_at = time.perf_counter()
+    log_event(
+        logger,
+        logging.INFO,
+        "activity.process_single_url.started",
+        job_id=job_id,
+        task_id=task.task_id,
+        queue=queue,
+        attempt_number=attempt_number,
+        url=task.url,
+    )
 
     async with SessionLocal() as session:
         repository = JobRepository(session)

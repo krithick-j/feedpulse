@@ -16,6 +16,9 @@ class FakeScalarResult:
     def scalar_one_or_none(self):
         return self._value
 
+    def scalar_one(self):
+        return self._value
+
 
 class FakeScalarsResult:
     def __init__(self, values):
@@ -83,3 +86,48 @@ class RepositoryTaskDetailTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(detail.attempts[0].status, "failed")
         self.assertEqual(detail.attempts[0].http_status, 403)
         self.assertEqual(detail.sample_records[0].link, "https://example.com/item")
+
+    async def test_list_task_records_returns_pagination_metadata(self) -> None:
+        now = datetime(2026, 6, 6, 12, 0, tzinfo=timezone.utc)
+        record_one = SimpleNamespace(
+            id="00000000-0000-0000-0000-000000000001",
+            title="First",
+            link="https://example.com/first",
+            published_at=now,
+            author="author-1",
+            summary="summary-1",
+        )
+        record_two = SimpleNamespace(
+            id="00000000-0000-0000-0000-000000000002",
+            title="Second",
+            link="https://example.com/second",
+            published_at=now,
+            author="author-2",
+            summary="summary-2",
+        )
+
+        session = AsyncMock()
+        session.execute.side_effect = [
+            FakeScalarResult(12),
+            FakeScalarResult(7),
+            FakeScalarsResult([record_one, record_two]),
+        ]
+        repository = JobRepository(session)
+
+        page = await repository.list_task_records(
+            job_id=SimpleNamespace(),
+            task_id=12,
+            limit=2,
+            offset=2,
+        )
+
+        self.assertIsNotNone(page)
+        assert page is not None
+        self.assertEqual(page.total, 7)
+        self.assertEqual(page.limit, 2)
+        self.assertEqual(page.offset, 2)
+        self.assertTrue(page.has_more)
+        self.assertEqual([record.link for record in page.items], [
+            "https://example.com/first",
+            "https://example.com/second",
+        ])

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from xml.etree.ElementTree import ParseError
@@ -11,6 +12,7 @@ import httpx
 from defusedxml import DefusedXmlException
 from defusedxml import ElementTree
 
+from app.core.logging import log_event
 from app.db.enums import FeedType
 
 SMALL_RESPONSE_LIMIT_BYTES = 5 * 1024 * 1024
@@ -20,6 +22,7 @@ REQUEST_HEADERS = {
     "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.1",
     "User-Agent": "Feedpulse/0.1 (+https://localhost/feedpulse)",
 }
+logger = logging.getLogger(__name__)
 
 
 class XmlIngestError(Exception):
@@ -51,10 +54,21 @@ async def extract_feed_records(url: str, *, queue: str) -> list[dict[str, Any]]:
 
     feed_type = _feed_type_from_version(parsed.version)
     feed_author = _normalize_string(parsed.feed.get("author")) if hasattr(parsed, "feed") else None
-    return [
+    records = [
         _normalize_entry(entry, source_url=url, feed_type=feed_type, fallback_author=feed_author)
         for entry in parsed.entries
     ]
+    log_event(
+        logger,
+        logging.INFO,
+        "xml.records.extracted",
+        url=url,
+        queue=queue,
+        bytes_downloaded=len(body),
+        record_count=len(records),
+        feed_type=feed_type,
+    )
+    return records
 
 
 async def _download_xml(url: str, *, queue: str) -> bytes:
@@ -67,19 +81,53 @@ async def _download_xml(url: str, *, queue: str) -> bytes:
         try:
             async with client.stream("GET", url) as response:
                 if response.status_code == 429:
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "xml.download.retryable_status",
+                        url=url,
+                        queue=queue,
+                        status_code=response.status_code,
+                    )
                     raise FeedFetchError("429 response while fetching feed")
                 if 400 <= response.status_code < 500:
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "xml.download.permanent_status",
+                        url=url,
+                        queue=queue,
+                        status_code=response.status_code,
+                    )
                     raise HttpClientError(
                         response.status_code,
                         f"{response.status_code} response while fetching feed",
                     )
                 if response.status_code >= 500:
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "xml.download.retryable_status",
+                        url=url,
+                        queue=queue,
+                        status_code=response.status_code,
+                    )
                     raise FeedFetchError(
                         f"{response.status_code} response while fetching feed",
                     )
 
                 declared_length = response.headers.get("content-length")
                 if declared_length is not None and int(declared_length) > max_bytes:
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "xml.download.oversized",
+                        url=url,
+                        queue=queue,
+                        status_code=response.status_code,
+                        declared_length=int(declared_length),
+                        max_bytes=max_bytes,
+                    )
                     raise OversizedResponseError(
                         f"Response exceeded {max_bytes} bytes before download"
                     )
@@ -88,16 +136,50 @@ async def _download_xml(url: str, *, queue: str) -> bytes:
                 async for chunk in response.aiter_bytes():
                     chunks.extend(chunk)
                     if len(chunks) > max_bytes:
+                        log_event(
+                            logger,
+                            logging.WARNING,
+                            "xml.download.oversized",
+                            url=url,
+                            queue=queue,
+                            status_code=response.status_code,
+                            bytes_downloaded=len(chunks),
+                            max_bytes=max_bytes,
+                        )
                         raise OversizedResponseError(
                             f"Response exceeded {max_bytes} bytes while streaming"
                         )
 
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "xml.download.completed",
+                    url=url,
+                    queue=queue,
+                    status_code=response.status_code,
+                    bytes_downloaded=len(chunks),
+                )
                 return bytes(chunks)
         except HttpClientError:
             raise
         except httpx.TimeoutException as exc:
+            log_event(
+                logger,
+                logging.WARNING,
+                "xml.download.timeout",
+                url=url,
+                queue=queue,
+            )
             raise FeedFetchError("Timeout while fetching feed") from exc
         except httpx.HTTPError as exc:
+            log_event(
+                logger,
+                logging.WARNING,
+                "xml.download.http_error",
+                url=url,
+                queue=queue,
+                error_message=str(exc) or "HTTP transport error while fetching feed",
+            )
             raise FeedFetchError(str(exc) or "HTTP transport error while fetching feed") from exc
 
 

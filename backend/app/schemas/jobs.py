@@ -63,6 +63,14 @@ class ExtractedRecord(BaseModel):
     summary: Optional[str]
 
 
+class PaginatedExtractedRecords(BaseModel):
+    items: List[ExtractedRecord]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class TaskDetail(TaskSummary):
     attempts: List[TaskAttempt]
     sample_records: List[ExtractedRecord]

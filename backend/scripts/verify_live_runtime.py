@@ -84,14 +84,39 @@ def main() -> int:
     if completed_task is None:
         raise RuntimeError(f"Job {job_id} had no completed task with extracted records")
 
-    records = request_json(
+    records_page = request_json(
         "GET",
-        f"{args.base_url}/jobs/{job_id}/tasks/{completed_task['id']}/records",
+        f"{args.base_url}/jobs/{job_id}/tasks/{completed_task['id']}/records?limit=25&offset=0",
     )
-    if not records:
+    if not records_page["items"]:
         raise RuntimeError(
             f"Job {job_id} task {completed_task['id']} reported extracted records but returned none"
         )
+    if records_page["limit"] != 25 or records_page["offset"] != 0:
+        raise RuntimeError(
+            f"Job {job_id} task {completed_task['id']} returned incorrect pagination metadata: {records_page}"
+        )
+    if records_page["total"] != completed_task["records_extracted"]:
+        raise RuntimeError(
+            f"Job {job_id} task {completed_task['id']} pagination total mismatch: "
+            f"page_total={records_page['total']} task_records={completed_task['records_extracted']}"
+        )
+
+    second_page_count = 0
+    if records_page["has_more"]:
+        second_page = request_json(
+            "GET",
+            f"{args.base_url}/jobs/{job_id}/tasks/{completed_task['id']}/records?limit=25&offset=25",
+        )
+        second_page_count = len(second_page["items"])
+        if second_page["offset"] != 25:
+            raise RuntimeError(
+                f"Job {job_id} task {completed_task['id']} second page returned incorrect offset: {second_page}"
+            )
+        if second_page_count <= 0:
+            raise RuntimeError(
+                f"Job {job_id} task {completed_task['id']} advertised more records but returned an empty second page"
+            )
 
     summary = {
         "job_id": job_id,
@@ -100,7 +125,8 @@ def main() -> int:
         "counts": counts,
         "completed_task_id": completed_task["id"],
         "completed_task_records": completed_task["records_extracted"],
-        "sample_record_count": len(records),
+        "page_one_record_count": len(records_page["items"]),
+        "page_two_record_count": second_page_count,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

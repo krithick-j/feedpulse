@@ -23,4 +23,5 @@ fi
 
 exec uvicorn app.main:app \
   --host 0.0.0.0 \
-  --port "${API_PORT:-8000}"
+  --port "${API_PORT:-8000}" \
+  --no-access-log

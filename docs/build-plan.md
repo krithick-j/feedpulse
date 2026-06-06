@@ -115,6 +115,14 @@ backend behavior, and frontend workflow.
 - added a live reconciliation verifier that terminates a running Temporal
   workflow and proves the reconciler repairs the API read model to terminal
   state with workflow-derived failure metadata
+- paginated the task-records API with explicit `limit`/`offset` metadata and
+  wired the UI record drill-down onto previous/next page controls
+- added JSON structured logging for request completion, job/task transitions,
+  XML fetch outcomes, and reconciliation repairs
+- hardened Compose readiness by adding a Temporal healthcheck and switching
+  dependent services from `service_started` to `service_healthy`
+- expanded the README with backend/frontend design decisions, logging strategy,
+  tradeoffs, scale notes, and a concrete demo walkthrough
 
 ### In Progress
 
@@ -160,11 +168,12 @@ backend behavior, and frontend workflow.
 - backend unit coverage now exists for XML normalization and startup
   reconciliation under `backend/tests/`
 - `docker compose exec -T api python -m unittest discover -s /app/tests`
-  now completes successfully with `27` passing backend tests
+  now completes successfully with `32` passing backend tests
 - `docker compose exec -T api python /app/scripts/verify_live_runtime.py --base-url http://127.0.0.1:8000/api/v1`
-  completed successfully against the live stack, producing job
-  `14db7a61-a4c3-4558-ae9f-64af9f6e606d` with `100` completed tasks, `1`
-  failed task, and a verified completed task record fetch
+  completed successfully against the live stack, now also verifying paginated
+  record browsing by producing job `9a63b114-ea68-4a56-a5f3-889ae065884a`
+  with `100` completed tasks, `1` failed task, `1499` extracted records on one
+  completed task, and successful first/second page fetches of `25` records each
 - `docker compose exec -T api python /app/scripts/verify_live_sse.py --base-url http://127.0.0.1:8000/api/v1`
   completed successfully against the live stack, producing job
   `d5ecdcff-2aa3-4b4b-9552-ddc2d359d534` with `204` progress events,

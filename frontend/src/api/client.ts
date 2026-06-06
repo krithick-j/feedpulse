@@ -9,6 +9,7 @@ import type {
   ExtractedRecord,
   JobDetail,
   JobEvent,
+  PaginatedRecords,
   JobSummary,
   StartJobResponse,
   TaskDetail,
@@ -43,6 +44,11 @@ export function createIdempotencyKey() {
 export interface TaskListQuery {
   status?: TaskStatus | "all";
   sort?: "url" | "status" | "duration" | "records" | "attempts";
+}
+
+export interface TaskRecordsQuery {
+  limit?: number;
+  offset?: number;
 }
 
 function mapCounts(payload: any) {
@@ -83,14 +89,7 @@ function mapTaskDetail(payload: any): TaskDetail {
       errorType: attempt.error_type,
       errorMessage: attempt.error_message,
     })),
-    sampleRecords: payload.sample_records.map((record: any) => ({
-      id: record.id,
-      title: record.title,
-      link: record.link,
-      publishedAt: record.published_at,
-      author: record.author,
-      summary: record.summary,
-    })),
+    sampleRecords: payload.sample_records.map(mapRecord),
   };
 }
 
@@ -122,6 +121,27 @@ function mapStartJobResponse(payload: any): StartJobResponse {
   return {
     jobId: payload.job_id,
     reused: payload.reused,
+  };
+}
+
+function mapRecord(record: any): ExtractedRecord {
+  return {
+    id: record.id,
+    title: record.title,
+    link: record.link,
+    publishedAt: record.published_at,
+    author: record.author,
+    summary: record.summary,
+  };
+}
+
+function mapPaginatedRecords(payload: any): PaginatedRecords {
+  return {
+    items: payload.items.map(mapRecord),
+    total: payload.total,
+    limit: payload.limit,
+    offset: payload.offset,
+    hasMore: payload.has_more,
   };
 }
 
@@ -192,21 +212,35 @@ export async function listTasks(jobId: string, query: TaskListQuery = {}): Promi
   return payload.map(mapTaskSummary);
 }
 
-export async function getTaskRecords(jobId: string, taskId: number): Promise<ExtractedRecord[]> {
+export async function getTaskRecords(
+  jobId: string,
+  taskId: number,
+  query: TaskRecordsQuery = {},
+): Promise<PaginatedRecords> {
   if (USE_MOCK_DATA) {
     const task = await getMockTask(jobId, taskId);
-    return task.sampleRecords;
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+    const items = task.sampleRecords.slice(offset, offset + limit);
+    return {
+      items,
+      total: task.sampleRecords.length,
+      limit,
+      offset,
+      hasMore: offset + items.length < task.sampleRecords.length,
+    };
   }
 
-  const payload = await fetchJson<any[]>(`/jobs/${jobId}/tasks/${taskId}/records`);
-  return payload.map((record) => ({
-    id: record.id,
-    title: record.title,
-    link: record.link,
-    publishedAt: record.published_at,
-    author: record.author,
-    summary: record.summary,
-  }));
+  const params = new URLSearchParams();
+  if (query.limit != null) {
+    params.set("limit", String(query.limit));
+  }
+  if (query.offset != null) {
+    params.set("offset", String(query.offset));
+  }
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  const payload = await fetchJson<any>(`/jobs/${jobId}/tasks/${taskId}/records${suffix}`);
+  return mapPaginatedRecords(payload);
 }
 
 export async function startJob(idempotencyKey: string): Promise<StartJobResponse> {

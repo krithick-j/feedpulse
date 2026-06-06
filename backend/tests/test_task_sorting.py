@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.api.routes.jobs import _sort_mock_tasks
+from app.services.jobs import _sort_mock_tasks
 from app.repositories.jobs import JobRepository
 from app.schemas.jobs import TaskSummary
 

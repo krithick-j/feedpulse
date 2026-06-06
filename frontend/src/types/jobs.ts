@@ -62,6 +62,14 @@ export interface ExtractedRecord {
   summary: string | null;
 }
 
+export interface PaginatedRecords {
+  items: ExtractedRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
 export interface TaskDetail extends TaskSummary {
   attempts: TaskAttempt[];
   sampleRecords: ExtractedRecord[];

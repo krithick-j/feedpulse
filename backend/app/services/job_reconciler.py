@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from temporalio.api.enums.v1 import WorkflowExecutionStatus
 
+from app.core.logging import log_event
 from app.core.settings import get_settings
 from app.db.session import SessionLocal
 from app.repositories.jobs import JobRepository
 from app.temporal.client import get_temporal_client
+
+logger = logging.getLogger(__name__)
 
 
 def reconciliation_enabled(settings=None) -> bool:
@@ -32,6 +36,12 @@ async def reconcile_running_jobs() -> int:
     if not running_jobs:
         return 0
 
+    log_event(
+        logger,
+        logging.INFO,
+        "reconciliation.started",
+        running_jobs=len(running_jobs),
+    )
     client = await get_temporal_client()
     reconciled = 0
     stale_before = datetime.now(timezone.utc) - timedelta(
@@ -43,6 +53,13 @@ async def reconcile_running_jobs() -> int:
         try:
             description = await handle.describe()
         except Exception:
+            log_event(
+                logger,
+                logging.WARNING,
+                "reconciliation.workflow_missing",
+                job_id=job.id,
+                temporal_run_id=job.temporal_run_id,
+            )
             await _repair_job(
                 job.id,
                 error_type="WorkflowMissingError",
@@ -53,6 +70,14 @@ async def reconcile_running_jobs() -> int:
 
         status_name = WorkflowExecutionStatus.Name(description.status)
         if description.status != WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING:
+            log_event(
+                logger,
+                logging.WARNING,
+                "reconciliation.closed_workflow_repair",
+                job_id=job.id,
+                temporal_run_id=job.temporal_run_id,
+                temporal_status=status_name,
+            )
             error_type, error_message = _closed_workflow_repair(status_name)
             await _repair_job(
                 job.id,
@@ -74,6 +99,15 @@ async def reconcile_running_jobs() -> int:
             await handle.terminate(
                 reason="Feedpulse reconciliation terminated a stuck running workflow"
             )
+            log_event(
+                logger,
+                logging.WARNING,
+                "reconciliation.stuck_workflow_terminated",
+                job_id=job.id,
+                temporal_run_id=job.temporal_run_id,
+                temporal_status=status_name,
+                history_length=description.history_length,
+            )
             await _repair_job(
                 job.id,
                 error_type="WorkflowStuckRunning",
@@ -81,6 +115,13 @@ async def reconcile_running_jobs() -> int:
             )
             reconciled += 1
 
+    log_event(
+        logger,
+        logging.INFO,
+        "reconciliation.completed",
+        running_jobs=len(running_jobs),
+        reconciled_count=reconciled,
+    )
     return reconciled
 
 

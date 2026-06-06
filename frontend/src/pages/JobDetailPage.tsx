@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { TEMPORAL_UI_BASE_URL } from "../api/client";
 import { MetricCard } from "../components/MetricCard";
 import { ProgressBar } from "../components/ProgressBar";
@@ -12,19 +12,30 @@ import type { TaskAttempt, TaskStatus } from "../types/jobs";
 
 export function JobDetailPage() {
   const { jobId, taskId } = useParams();
+  const location = useLocation();
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("url");
+  const [recordsOffset, setRecordsOffset] = useState(0);
   const parsedTaskId = taskId ? Number(taskId) : undefined;
+  const recordsPageSize = 20;
+  const startedState = new URLSearchParams(location.search).get("started");
 
   const jobQuery = useJobDetail(jobId);
   const taskQuery = useTaskDetail(jobId, parsedTaskId);
-  const recordsQuery = useTaskRecords(jobId, parsedTaskId);
+  const recordsQuery = useTaskRecords(jobId, parsedTaskId, {
+    limit: recordsPageSize,
+    offset: recordsOffset,
+  });
   const taskListQuery = useTaskList(jobId, {
     status: statusFilter,
     sort: sortKey,
   });
 
   useJobEvents(jobId, jobQuery.data?.status === "running");
+
+  useEffect(() => {
+    setRecordsOffset(0);
+  }, [parsedTaskId]);
 
   if (jobQuery.isLoading) {
     return <main className="shell"><div className="empty-state">Loading job...</div></main>;
@@ -98,6 +109,14 @@ export function JobDetailPage() {
             )}
           />
         </div>
+
+        {startedState && (
+          <div className="notice-banner">
+            {startedState === "reused"
+              ? "Existing job reused for the submitted idempotency key."
+              : "Job accepted and processing has started."}
+          </div>
+        )}
       </section>
 
       <section className="detail-grid">
@@ -200,21 +219,51 @@ export function JobDetailPage() {
               <div className="record-list">
                 {recordsQuery.isLoading ? (
                   <div className="empty-state compact">Loading extracted records...</div>
-                ) : (recordsQuery.data ?? []).length === 0 ? (
+                ) : (recordsQuery.data?.items ?? []).length === 0 ? (
                   <div className="empty-state compact">No records captured for this task yet.</div>
                 ) : (
-                  recordsQuery.data!.map((record) => (
-                    <article key={record.id} className="record-card">
-                      <p className="metric-label">{record.author ?? "Unknown author"}</p>
-                      <h4>
-                        <a className="table-link" href={record.link} target="_blank" rel="noreferrer">
-                          {record.title}
-                        </a>
-                      </h4>
-                      <p className="row-subtle">{record.publishedAt ?? "No publish timestamp"}</p>
-                      <p>{record.summary}</p>
-                    </article>
-                  ))
+                  <>
+                    <div className="panel-header">
+                      <div>
+                        <h3>Extracted Records</h3>
+                        <p>
+                          Showing {recordsQuery.data!.offset + 1}-
+                          {Math.min(
+                            recordsQuery.data!.offset + recordsQuery.data!.items.length,
+                            recordsQuery.data!.total,
+                          )} of {recordsQuery.data!.total}
+                        </p>
+                      </div>
+                      <div className="filters">
+                        <button
+                          className="secondary-link button-link"
+                          disabled={recordsQuery.data!.offset === 0}
+                          onClick={() => setRecordsOffset((current) => Math.max(0, current - recordsPageSize))}
+                        >
+                          Previous
+                        </button>
+                        <button
+                          className="secondary-link button-link"
+                          disabled={!recordsQuery.data!.hasMore}
+                          onClick={() => setRecordsOffset((current) => current + recordsPageSize)}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                    {recordsQuery.data!.items.map((record) => (
+                      <article key={record.id} className="record-card">
+                        <p className="metric-label">{record.author ?? "Unknown author"}</p>
+                        <h4>
+                          <a className="table-link" href={record.link} target="_blank" rel="noreferrer">
+                            {record.title}
+                          </a>
+                        </h4>
+                        <p className="row-subtle">{record.publishedAt ?? "No publish timestamp"}</p>
+                        <p>{record.summary}</p>
+                      </article>
+                    ))}
+                  </>
                 )}
               </div>
             </div>

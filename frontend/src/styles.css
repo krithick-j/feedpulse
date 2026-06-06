@@ -139,11 +139,31 @@ select {
   color: rgba(248, 244, 236, 0.84);
 }
 
+.button-link {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.button-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .hero-metrics,
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
+}
+
+.notice-banner {
+  margin-top: 1rem;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 187, 92, 0.14);
+  border: 1px solid rgba(255, 187, 92, 0.3);
+  color: #ffe2ad;
 }
 
 .metric-card {

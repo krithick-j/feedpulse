@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getJob, getTask, getTaskRecords, listJobs, listTasks, type TaskListQuery } from "../api/client";
+import { getJob, getTask, getTaskRecords, listJobs, listTasks, type TaskListQuery, type TaskRecordsQuery } from "../api/client";
 
 export function useJobs() {
   return useQuery({
@@ -24,10 +24,14 @@ export function useTaskDetail(jobId: string | undefined, taskId: number | undefi
   });
 }
 
-export function useTaskRecords(jobId: string | undefined, taskId: number | undefined) {
+export function useTaskRecords(
+  jobId: string | undefined,
+  taskId: number | undefined,
+  query: TaskRecordsQuery,
+) {
   return useQuery({
-    queryKey: ["jobs", jobId, "tasks", taskId, "records"],
-    queryFn: () => getTaskRecords(jobId!, taskId!),
+    queryKey: ["jobs", jobId, "tasks", taskId, "records", query.limit ?? 20, query.offset ?? 0],
+    queryFn: () => getTaskRecords(jobId!, taskId!, query),
     enabled: Boolean(jobId) && Number.isFinite(taskId),
   });
 }

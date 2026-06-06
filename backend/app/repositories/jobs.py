@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ from sqlalchemy import Select, case, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import log_event
 from app.db.notifications import JOB_EVENTS_CHANNEL, job_events_channel_for_job
 from app.db.enums import AttemptStatus, FeedType, JobStatus, TaskStatus
 from app.db.models import Job, JobTask, Record, TaskAttempt
@@ -19,11 +21,14 @@ from app.schemas.jobs import (
     JobDetail,
     JobProjection,
     JobSummary,
+    PaginatedExtractedRecords,
     StartJobResponse,
     TaskAttempt as TaskAttemptSchema,
     TaskDetail,
     TaskSummary,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class JobRepository:
@@ -57,6 +62,13 @@ class JobRepository:
             if existing is None:
                 raise RuntimeError("Job conflict detected but no existing job row was found")
 
+            log_event(
+                logger,
+                logging.INFO,
+                "job.reused",
+                job_id=existing,
+                idempotency_key=idempotency_key,
+            )
             return StartJobResponse(job_id=str(existing), reused=True)
 
         self.session.add_all(
@@ -70,6 +82,14 @@ class JobRepository:
         )
         await self._notify_job_event(inserted_job_id, "job.created")
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "job.created",
+            job_id=inserted_job_id,
+            idempotency_key=idempotency_key,
+            total_urls=len(urls),
+        )
         return StartJobResponse(job_id=str(inserted_job_id), reused=False)
 
     async def list_job_summaries(self, *, limit: int = 20) -> list[JobSummary]:
@@ -193,7 +213,14 @@ class JobRepository:
         result = await self.session.execute(statement)
         return [self._map_task_summary(task) for task in result.scalars().all()]
 
-    async def list_task_records(self, job_id: uuid.UUID, task_id: int, *, limit: int = 50) -> Optional[list[ExtractedRecord]]:
+    async def list_task_records(
+        self,
+        job_id: uuid.UUID,
+        task_id: int,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Optional[PaginatedExtractedRecords]:
         task_result = await self.session.execute(
             select(JobTask.id)
             .where(JobTask.job_id == job_id, JobTask.id == task_id)
@@ -201,13 +228,20 @@ class JobRepository:
         if task_result.scalar_one_or_none() is None:
             return None
 
+        total_result = await self.session.execute(
+            select(func.count(Record.id))
+            .where(Record.job_id == job_id, Record.task_id == task_id)
+        )
+        total = int(total_result.scalar_one())
+
         result = await self.session.execute(
             select(Record)
             .where(Record.job_id == job_id, Record.task_id == task_id)
             .order_by(Record.published_at.desc().nullslast(), Record.id.desc())
+            .offset(offset)
             .limit(limit)
         )
-        return [
+        items = [
             ExtractedRecord(
                 id=str(record.id),
                 title=record.title or "",
@@ -218,6 +252,13 @@ class JobRepository:
             )
             for record in result.scalars().all()
         ]
+        return PaginatedExtractedRecords(
+            items=items,
+            total=total,
+            limit=limit,
+            offset=offset,
+            has_more=offset + len(items) < total,
+        )
 
     async def list_job_task_rows(self, job_id: uuid.UUID) -> list[JobTask]:
         result = await self.session.execute(
@@ -239,6 +280,13 @@ class JobRepository:
 
         await self._notify_job_event(job_id, "job.updated")
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "job.running",
+            job_id=job_id,
+            temporal_run_id=job.temporal_run_id,
+        )
         return True
 
     async def set_temporal_run_id(self, job_id: uuid.UUID, run_id: str) -> bool:
@@ -249,6 +297,13 @@ class JobRepository:
         job.temporal_run_id = run_id
         await self._notify_job_event(job_id, "job.updated")
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "job.temporal_run_id.persisted",
+            job_id=job_id,
+            temporal_run_id=run_id,
+        )
         return True
 
     async def mark_task_started(self, task_id: int, *, queue: str, attempt_number: int) -> bool:
@@ -276,6 +331,15 @@ class JobRepository:
         )
         await self._notify_job_event(task.job_id, "task.updated", task_id=task_id)
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "task.started",
+            job_id=task.job_id,
+            task_id=task_id,
+            queue=queue,
+            attempt_number=attempt_number,
+        )
         return True
 
     async def complete_task_success(
@@ -350,6 +414,17 @@ class JobRepository:
 
         await self._notify_job_event(task.job_id, "task.updated", task_id=task_id)
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "task.completed",
+            job_id=task.job_id,
+            task_id=task_id,
+            queue=queue,
+            attempt_number=attempt_number,
+            records_extracted=records_count,
+            duration_ms=duration_ms,
+        )
         return True
 
     async def complete_task_failure(
@@ -396,6 +471,19 @@ class JobRepository:
 
         await self._notify_job_event(task.job_id, "task.updated", task_id=task_id)
         await self.session.commit()
+        log_event(
+            logger,
+            logging.WARNING,
+            "task.failed",
+            job_id=task.job_id,
+            task_id=task_id,
+            queue=queue,
+            attempt_number=attempt_number,
+            duration_ms=duration_ms,
+            http_status=http_status,
+            error_type=error_type,
+            error_message=error_message,
+        )
         return True
 
     async def mark_task_attempt_failed(
@@ -439,6 +527,19 @@ class JobRepository:
 
         await self._notify_job_event(task.job_id, "task.updated", task_id=task_id)
         await self.session.commit()
+        log_event(
+            logger,
+            logging.WARNING,
+            "task.retry_scheduled",
+            job_id=task.job_id,
+            task_id=task_id,
+            queue=queue,
+            attempt_number=attempt_number,
+            duration_ms=duration_ms,
+            http_status=http_status,
+            error_type=error_type,
+            error_message=error_message,
+        )
         return True
 
     async def finalize_job(self, job_id: uuid.UUID) -> bool:
@@ -474,6 +575,19 @@ class JobRepository:
 
         await self._notify_job_event(job_id, "job.updated")
         await self.session.commit()
+        log_event(
+            logger,
+            logging.INFO,
+            "job.finalized",
+            job_id=job_id,
+            status=job.status,
+            counts={
+                "pending": row["pending_count"],
+                "in_progress": row["in_progress_count"],
+                "completed": row["completed_count"],
+                "failed": row["failed_count"],
+            },
+        )
         return True
 
     async def fail_incomplete_tasks(
@@ -521,6 +635,15 @@ class JobRepository:
 
         await self._notify_job_event(job_id, "job.updated")
         await self.session.commit()
+        log_event(
+            logger,
+            logging.WARNING,
+            "job.incomplete_tasks_failed",
+            job_id=job_id,
+            error_type=error_type,
+            error_message=error_message,
+            failed_task_ids=[task.id for task in unfinished_tasks],
+        )
         return True
 
     async def _get_job_id_by_idempotency_key(self, idempotency_key: str) -> Optional[uuid.UUID]:

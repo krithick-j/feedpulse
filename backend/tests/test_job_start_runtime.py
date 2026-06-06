@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 
-from app.api.routes import jobs as job_routes
+from app.api.handlers import jobs as job_handlers
+from app.services import jobs as job_service
 from app.schemas.jobs import StartJobRequest, StartJobResponse
 
 
@@ -24,7 +25,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(
-                job_routes,
+                job_service,
                 "settings",
                 SimpleNamespace(
                     data_backend="database",
@@ -32,12 +33,12 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_routes, "_with_repository", new=AsyncMock(return_value=response)),
-            patch.object(job_routes, "schedule_job_simulation") as simulator_mock,
-            patch.object(job_routes, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
+            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "schedule_job_simulation") as simulator_mock,
+            patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
         ):
             with self.assertRaises(HTTPException) as raised:
-                await job_routes.start_job()
+                await job_handlers.start_job(None)
 
         self.assertEqual(raised.exception.status_code, 503)
         self.assertIn("Simulator runtime is disabled", raised.exception.detail)
@@ -49,7 +50,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(
-                job_routes,
+                job_service,
                 "settings",
                 SimpleNamespace(
                     data_backend="database",
@@ -57,11 +58,11 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=True,
                 ),
             ),
-            patch.object(job_routes, "_with_repository", new=AsyncMock(return_value=response)),
-            patch.object(job_routes, "schedule_job_simulation") as simulator_mock,
-            patch.object(job_routes, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
+            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "schedule_job_simulation") as simulator_mock,
+            patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
         ):
-            result = await job_routes.start_job()
+            result = await job_handlers.start_job(None)
 
         self.assertEqual(result.job_id, JOB_ID)
         simulator_mock.assert_called_once()
@@ -72,7 +73,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(
-                job_routes,
+                job_service,
                 "settings",
                 SimpleNamespace(
                     data_backend="database",
@@ -80,11 +81,11 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_routes, "_with_repository", new=AsyncMock(return_value=response)),
-            patch.object(job_routes, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
-            patch.object(job_routes, "schedule_job_simulation") as simulator_mock,
+            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
+            patch.object(job_service, "schedule_job_simulation") as simulator_mock,
         ):
-            result = await job_routes.start_job()
+            result = await job_handlers.start_job(None)
 
         self.assertEqual(result.job_id, JOB_ID)
         temporal_mock.assert_awaited_once()
@@ -95,7 +96,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(
-                job_routes,
+                job_service,
                 "settings",
                 SimpleNamespace(
                     data_backend="database",
@@ -103,11 +104,11 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     enable_simulator_runtime=False,
                 ),
             ),
-            patch.object(job_routes, "_with_repository", new=AsyncMock(return_value=response)),
-            patch.object(job_routes, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
-            patch.object(job_routes, "schedule_job_simulation") as simulator_mock,
+            patch.object(job_service, "_with_repository", new=AsyncMock(return_value=response)),
+            patch.object(job_service, "_start_temporal_job", new=AsyncMock()) as temporal_mock,
+            patch.object(job_service, "schedule_job_simulation") as simulator_mock,
         ):
-            result = await job_routes.start_job(StartJobRequest(idempotency_key="ui-123"))
+            result = await job_handlers.start_job(StartJobRequest(idempotency_key="ui-123"))
 
         self.assertEqual(result.job_id, JOB_ID)
         self.assertTrue(result.reused)

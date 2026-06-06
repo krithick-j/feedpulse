@@ -5,7 +5,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.api.routes import jobs as job_routes
+from app.api.handlers import jobs as job_handlers
+from app.services import jobs as job_service
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
 from app.schemas.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
@@ -138,15 +139,15 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
-                job_routes,
+                job_service,
                 "_with_repository",
                 new=AsyncMock(side_effect=[terminal_projection, terminal_projection]),
             ),
-            patch.object(job_routes, "JobEventListener", return_value=FakeListener([])),
+            patch.object(job_service, "JobEventListener", return_value=FakeListener([])),
         ):
-            response = await job_routes.stream_job_events(JOB_ID)
+            response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
         self.assertEqual(
@@ -175,9 +176,9 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
-                job_routes,
+                job_service,
                 "_with_repository",
                 new=AsyncMock(
                     side_effect=[
@@ -188,12 +189,12 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ),
             patch.object(
-                job_routes,
+                job_service,
                 "JobEventListener",
                 return_value=FakeListener([JobNotification(job_id=JOB_ID, scope="task.updated", task_id=1)]),
             ),
         ):
-            response = await job_routes.stream_job_events(JOB_ID)
+            response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
         self.assertEqual(
@@ -224,9 +225,9 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(job_routes, "settings", SimpleNamespace(data_backend="database")),
+            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
             patch.object(
-                job_routes,
+                job_service,
                 "_with_repository",
                 new=AsyncMock(
                     side_effect=[
@@ -237,12 +238,12 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
                 ),
             ),
             patch.object(
-                job_routes,
+                job_service,
                 "JobEventListener",
                 return_value=FakeListener([None]),
             ),
         ):
-            response = await job_routes.stream_job_events(JOB_ID)
+            response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
         self.assertEqual(

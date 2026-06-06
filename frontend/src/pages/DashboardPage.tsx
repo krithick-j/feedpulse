@@ -14,7 +14,8 @@ export function DashboardPage() {
     mutationFn: startJob,
     onSuccess: async (response) => {
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      navigate(`/jobs/${response.jobId}`);
+      const startedQuery = response.reused ? "started=reused" : "started=new";
+      navigate(`/jobs/${response.jobId}?${startedQuery}`);
     },
   });
 
