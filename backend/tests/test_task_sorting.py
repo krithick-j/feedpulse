@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.services.jobs import _sort_mock_tasks
+from app.services.jobs.projections import sort_mock_tasks
 from app.repositories.jobs import JobRepository
 from app.dto.jobs import TaskSummary
 
@@ -31,7 +31,7 @@ class TaskSortingTests(unittest.TestCase):
             make_task(task_id=3, url="https://c.example/feed.xml", attempt_count=2),
         ]
 
-        ordered = _sort_mock_tasks(tasks, "attempts")
+        ordered = sort_mock_tasks(tasks, "attempts")
 
         self.assertEqual([task.id for task in ordered], [2, 3, 1])
 

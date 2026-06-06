@@ -18,7 +18,7 @@ from app.dto.jobs import (
     TaskDetail,
     TaskSummary,
 )
-from app.services import jobs as job_service
+from app.services.jobs import SimulatorRuntimeDisabledError, job_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ async def start_job(payload: Optional[StartJobRequest]) -> StartJobResponse:
     idempotency_key = payload.idempotency_key if payload else None
     try:
         return await job_service.start_job(idempotency_key)
-    except job_service.SimulatorRuntimeDisabledError as exc:
+    except SimulatorRuntimeDisabledError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Simulator runtime is disabled unless ENABLE_SIMULATOR_RUNTIME=true",

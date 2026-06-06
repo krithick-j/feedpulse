@@ -6,8 +6,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from app.api.handlers import jobs as job_handlers
-from app.services.jobs import events as job_service
+from app.services.jobs import JobService
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
+
+
+def make_event_service(*, projections, listener_events):
+    return JobService(
+        settings=SimpleNamespace(data_backend="database"),
+        run_repository=AsyncMock(side_effect=projections),
+        event_listener_factory=lambda job_id: FakeListener(listener_events),
+    )
 from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
 
@@ -138,15 +146,11 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1500,
         )
 
-        with (
-            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
-            patch.object(
-                job_service,
-                "with_repository",
-                new=AsyncMock(side_effect=[terminal_projection, terminal_projection]),
-            ),
-            patch.object(job_service, "JobEventListener", return_value=FakeListener([])),
-        ):
+        service = make_event_service(
+            projections=[terminal_projection, terminal_projection],
+            listener_events=[],
+        )
+        with patch.object(job_handlers, "job_service", service):
             response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
@@ -175,25 +179,11 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1800,
         )
 
-        with (
-            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
-            patch.object(
-                job_service,
-                "with_repository",
-                new=AsyncMock(
-                    side_effect=[
-                        initial_projection,
-                        initial_projection,
-                        terminal_projection,
-                    ]
-                ),
-            ),
-            patch.object(
-                job_service,
-                "JobEventListener",
-                return_value=FakeListener([JobNotification(job_id=JOB_ID, scope="task.updated", task_id=1)]),
-            ),
-        ):
+        service = make_event_service(
+            projections=[initial_projection, initial_projection, terminal_projection],
+            listener_events=[JobNotification(job_id=JOB_ID, scope="task.updated", task_id=1)],
+        )
+        with patch.object(job_handlers, "job_service", service):
             response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
@@ -224,25 +214,11 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1800,
         )
 
-        with (
-            patch.object(job_service, "settings", SimpleNamespace(data_backend="database")),
-            patch.object(
-                job_service,
-                "with_repository",
-                new=AsyncMock(
-                    side_effect=[
-                        initial_projection,
-                        initial_projection,
-                        terminal_projection,
-                    ]
-                ),
-            ),
-            patch.object(
-                job_service,
-                "JobEventListener",
-                return_value=FakeListener([None]),
-            ),
-        ):
+        service = make_event_service(
+            projections=[initial_projection, initial_projection, terminal_projection],
+            listener_events=[None],
+        )
+        with patch.object(job_handlers, "job_service", service):
             response = await job_handlers.stream_job_events(JOB_ID)
             events = await collect_sse(response)
 
