@@ -5,17 +5,17 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 
 from app.api.handlers.jobs import JobHandler
-from app.services.jobs import JobRepositoryGateway, JobService
+from app.services.jobs import JobService
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
 from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
 
 def make_event_handler(*, projections, listener_events):
-    gateway = JobRepositoryGateway(
+    service = JobService(
+        executor=Mock(),
         run_repository=AsyncMock(side_effect=projections),
         event_listener_factory=lambda job_id: FakeListener(listener_events),
     )
-    service = JobService(gateway=gateway, executor=Mock())
     return JobHandler(service=service)
 
 

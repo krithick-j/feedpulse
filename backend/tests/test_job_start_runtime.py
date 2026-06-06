@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 import uuid
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 from app.dto.jobs import StartJobRequest, StartJobResponse
 from app.services.jobs import JobService
@@ -12,9 +12,7 @@ JOB_ID = "11111111-1111-4111-8111-111111111111"
 
 
 def make_service(*, response: StartJobResponse, executor):
-    gateway = Mock()
-    gateway.create_job = AsyncMock(return_value=response)
-    return JobService(gateway=gateway, executor=executor)
+    return JobService(executor=executor, run_repository=AsyncMock(return_value=response))
 
 
 class JobStartTests(unittest.IsolatedAsyncioTestCase):
