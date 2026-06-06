@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { createIdempotencyKey, startJob, TEMPORAL_UI_BASE_URL, USE_MOCK_DATA } from "../api/client";
+import { createIdempotencyKey, startJob, TEMPORAL_UI_BASE_URL } from "../api/client";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { useJobs } from "../hooks/useJobs";
@@ -32,8 +32,8 @@ export function DashboardPage() {
           <h1>Watch the ingestion lanes without losing failure detail.</h1>
           <p className="hero-text">
             Feedpulse keeps the operator view focused on job state, queue pressure,
-            and task-level evidence. The current build ships with a mock transport
-            so the UI can be exercised before the live backend is wired.
+            and task-level evidence — fetching, parsing, and persisting feeds
+            concurrently while surfacing retries and failures in real time.
           </p>
           <div className="hero-actions">
             <button
@@ -43,7 +43,6 @@ export function DashboardPage() {
             >
               {startJobMutation.isPending ? "Starting..." : "Start Job"}
             </button>
-            <span className="mode-chip">{USE_MOCK_DATA ? "Mock transport" : "API transport"}</span>
           </div>
         </div>
 
