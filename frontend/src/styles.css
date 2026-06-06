@@ -334,6 +334,7 @@ th {
 .detail-main {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .filters {
@@ -364,6 +365,18 @@ th {
 .record-list {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+}
+
+/* Long unbreakable strings (URLs, raw HTML in record summaries) must wrap so
+   they don't inflate the grid track and overflow the viewport. */
+.task-summary h3,
+.task-summary p,
+.record-card h4,
+.record-card p,
+.attempt-error .error-inline {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .attempt-card,
