@@ -47,7 +47,7 @@ export function TaskTable({ jobId, tasks, selectedTaskId }: TaskTableProps) {
                   )}
                 </td>
                 <td><StatusBadge status={task.status} /></td>
-                <td>{task.queue ?? "Waiting"}</td>
+                <td className="queue-cell">{task.queue ?? "Waiting"}</td>
                 <td>
                   <div className="attempt-count-cell">
                     <span>{task.attemptCount}</span>

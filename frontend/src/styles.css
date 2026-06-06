@@ -206,11 +206,13 @@ select {
 }
 
 .table-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 520px;
 }
 
 table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
 }
 
@@ -223,10 +225,19 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: rgba(255, 255, 255, 0.56);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  white-space: nowrap;
+  background: #0c1320;
+}
+
+td.queue-cell {
+  white-space: nowrap;
 }
 
 .table-link {
