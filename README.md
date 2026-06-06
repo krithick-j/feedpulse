@@ -9,8 +9,10 @@ the UI over SSE.
 
 - `POST /jobs` starts a new processing run and returns a `job_id` immediately
 - each URL is fetched, parsed, normalized, and persisted as extracted records
+- record summaries are stored as sanitized plain-text excerpts (HTML stripped, truncated)
 - transient failures retry with backoff; permanent failures stay inspectable
 - the dashboard shows recent jobs, live progress, task failures, and retry detail
+- progress includes per-second throughput and an estimated time-to-completion
 - `GET /jobs/:id/tasks/:task_id/records` is paginated with `limit` and `offset`
 
 ## Stack
@@ -49,12 +51,6 @@ Ports:
 - Temporal UI: `http://localhost:8088`
 - App Postgres: `localhost:5433`
 
-If you want the lighter simulator path instead of Temporal:
-
-```bash
-JOB_EXECUTION_BACKEND=simulator ENABLE_SIMULATOR_RUNTIME=true docker compose up --build
-```
-
 ## Frontend Workflow
 
 ```bash
@@ -63,8 +59,8 @@ pnpm install
 pnpm dev
 ```
 
-The standalone frontend defaults to mock transport. Set `VITE_USE_MOCK_DATA=false`
-in `frontend/.env` to point it at the live API.
+The dev server talks to the live API at `VITE_API_BASE_URL` (defaults to
+`http://localhost:8000/api/v1`), so start the backend stack first.
 
 ## Backend Workflow
 
@@ -226,8 +222,8 @@ Those log lines should be JSON objects containing event names and fields such as
   inspectability and retry semantics.
 - The records endpoint is paginated, but the current UI only provides simple
   previous/next pagination rather than richer cursoring or virtualized browsing.
-- The app keeps a mock transport for isolated frontend work, which is useful for
-  iteration but adds a second execution path to maintain.
+- The job URL list is a fixed in-repo seed (`backend/app/data/xml_sources.py`)
+  rather than user-supplied input.
 
 ## How It Breaks At Scale
 
@@ -261,4 +257,4 @@ Use `docs/demo-walkthrough.md` for a concrete operator-flow walkthrough covering
 ## Repository Notes
 
 - `docs/build-plan.md` keeps the implementation history and verification notes
-- `assignment-plan.md` in the workspace root is the original build plan
+- `docs/demo-walkthrough.md` is the operator-flow walkthrough
