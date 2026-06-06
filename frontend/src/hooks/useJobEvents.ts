@@ -3,24 +3,15 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { getMockEvents, normalizeJobEvent, USE_MOCK_DATA } from "../api/client";
 import type { JobDetail, JobEvent, TaskDetail, TaskSummary } from "../types/jobs";
 
-// Coalesce a burst of task.updated events into a single task-list refetch.
-// The list query is filter/sort-keyed so it can't be patched from a payload;
-// without debouncing, every event refetched /jobs/{id}/tasks.
-const TASK_LIST_REFETCH_DEBOUNCE_MS = 400;
-const taskListRefetchTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-function scheduleTaskListRefetch(queryClient: QueryClient, jobId: string) {
-  const existing = taskListRefetchTimers.get(jobId);
-  if (existing) {
-    clearTimeout(existing);
-  }
-
-  taskListRefetchTimers.set(
-    jobId,
-    setTimeout(() => {
-      taskListRefetchTimers.delete(jobId);
-      queryClient.invalidateQueries({ queryKey: ["jobs", jobId, "tasks", "list"] });
-    }, TASK_LIST_REFETCH_DEBOUNCE_MS),
+// Patch the cached task-list rows in place across every filter/sort variant,
+// so a task.updated event never refetches GET /jobs/{id}/tasks. Rows that no
+// longer match an active status filter (or a metric-based sort order) self-
+// correct on the next real fetch (filter/sort change or remount).
+function patchTaskInLists(queryClient: QueryClient, jobId: string, nextTask: TaskSummary) {
+  queryClient.setQueriesData<TaskSummary[] | undefined>(
+    { queryKey: ["jobs", jobId, "tasks", "list"] },
+    (current) =>
+      current?.map((task) => (task.id === nextTask.id ? { ...task, ...nextTask } : task)),
   );
 }
 
@@ -88,7 +79,7 @@ function applyEvent(queryClient: QueryClient, event: JobEvent) {
     // The task-list query is keyed by filter/sort and the records query holds
     // server-derived data the event payload doesn't carry, so those still need
     // a refetch. Both only refetch when actually mounted.
-    scheduleTaskListRefetch(queryClient, event.payload.jobId);
+    patchTaskInLists(queryClient, event.payload.jobId, event.payload.task);
 
     queryClient.invalidateQueries({
       queryKey: ["jobs", event.payload.jobId, "tasks", event.payload.task.id, "records"],
