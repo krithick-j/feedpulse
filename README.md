@@ -244,17 +244,7 @@ At 100x scale, around 10k URLs per job:
 - extracted records likely need partitioning, retention rules, or object-storage
   offloading depending on payload size and history requirements
 
-## Demo Walkthrough
+## Demo
 
-Use `docs/demo-walkthrough.md` for a concrete operator-flow walkthrough covering:
-
-- starting a job
-- watching live progress
-- inspecting a failed task
-- inspecting a retried task
-- validating the paginated records view
-
-## Repository Notes
-
-- `docs/build-plan.md` keeps the implementation history and verification notes
-- `docs/demo-walkthrough.md` is the operator-flow walkthrough
+Trigger a job from the dashboard, watch live progress over SSE, drill into a
+failed or retried task, and page through the extracted records.
