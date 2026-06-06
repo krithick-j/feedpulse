@@ -98,16 +98,8 @@ class JobHandler:
         if not await self._events.available(job_id):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
-        events = self._events
-
-        async def event_stream() -> AsyncIterator[str]:
-            async for payload in events.stream(job_id):
-                if payload is None:
-                    yield ": keepalive\n\n"
-                else:
-                    yield _encode_sse(payload)
-
-        return StreamingResponse(event_stream(), media_type="text/event-stream")
+        frames = _sse_frames(self._events.stream(job_id))
+        return StreamingResponse(frames, media_type="text/event-stream")
 
     @staticmethod
     def _parse_task_status_filter(value: Optional[str]) -> Optional[DbTaskStatus]:
@@ -120,6 +112,15 @@ class JobHandler:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Invalid task status filter",
             ) from exc
+
+
+async def _sse_frames(payloads: AsyncIterator[Optional[dict]]) -> AsyncIterator[str]:
+    """Encode job-event payloads as SSE frames; None becomes a keepalive."""
+    async for payload in payloads:
+        if payload is None:
+            yield ": keepalive\n\n"
+        else:
+            yield _encode_sse(payload)
 
 
 def _encode_sse(payload: dict) -> str:
