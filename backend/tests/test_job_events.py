@@ -3,20 +3,21 @@ from __future__ import annotations
 import json
 import unittest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
-from app.api.handlers import jobs as job_handlers
+from app.api.handlers.jobs import JobHandler
 from app.services.jobs import JobService
 from app.db.notifications import JOB_EVENTS_CHANNEL, JobEventListener, JobNotification, _parse_job_notification, job_events_channel_for_job
+from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
 
 
-def make_event_service(*, projections, listener_events):
-    return JobService(
+def make_event_handler(*, projections, listener_events):
+    service = JobService(
         settings=SimpleNamespace(data_backend="database"),
         run_repository=AsyncMock(side_effect=projections),
         event_listener_factory=lambda job_id: FakeListener(listener_events),
     )
-from app.dto.jobs import JobCounts, JobProjection, JobSummary, TaskSummary
+    return JobHandler(service=service)
 
 
 JOB_ID = "11111111-1111-4111-8111-111111111111"
@@ -146,13 +147,12 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1500,
         )
 
-        service = make_event_service(
+        handler = make_event_handler(
             projections=[terminal_projection, terminal_projection],
             listener_events=[],
         )
-        with patch.object(job_handlers, "job_service", service):
-            response = await job_handlers.stream_job_events(JOB_ID)
-            events = await collect_sse(response)
+        response = await handler.stream_job_events(JOB_ID)
+        events = await collect_sse(response)
 
         self.assertEqual(
             [event["type"] for event in events],
@@ -179,13 +179,12 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1800,
         )
 
-        service = make_event_service(
+        handler = make_event_handler(
             projections=[initial_projection, initial_projection, terminal_projection],
             listener_events=[JobNotification(job_id=JOB_ID, scope="task.updated", task_id=1)],
         )
-        with patch.object(job_handlers, "job_service", service):
-            response = await job_handlers.stream_job_events(JOB_ID)
-            events = await collect_sse(response)
+        response = await handler.stream_job_events(JOB_ID)
+        events = await collect_sse(response)
 
         self.assertEqual(
             [event["type"] for event in events],
@@ -214,13 +213,12 @@ class JobEventStreamTests(unittest.IsolatedAsyncioTestCase):
             elapsed_ms=1800,
         )
 
-        service = make_event_service(
+        handler = make_event_handler(
             projections=[initial_projection, initial_projection, terminal_projection],
             listener_events=[None],
         )
-        with patch.object(job_handlers, "job_service", service):
-            response = await job_handlers.stream_job_events(JOB_ID)
-            events = await collect_sse(response)
+        response = await handler.stream_job_events(JOB_ID)
+        events = await collect_sse(response)
 
         self.assertEqual(
             [event["type"] for event in events],

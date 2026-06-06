@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 from fastapi import HTTPException
 
-from app.api.handlers import jobs as job_handlers
+from app.api.handlers.jobs import JobHandler
 from app.dto.jobs import StartJobRequest, StartJobResponse
 from app.services.jobs import JobService
 
@@ -14,8 +14,8 @@ from app.services.jobs import JobService
 JOB_ID = "11111111-1111-4111-8111-111111111111"
 
 
-def make_service(*, job_execution_backend, enable_simulator_runtime, response, simulator, temporal):
-    return JobService(
+def make_handler(*, job_execution_backend, enable_simulator_runtime, response, simulator, temporal):
+    service = JobService(
         settings=SimpleNamespace(
             data_backend="database",
             job_execution_backend=job_execution_backend,
@@ -25,6 +25,7 @@ def make_service(*, job_execution_backend, enable_simulator_runtime, response, s
         schedule_simulation=simulator,
         temporal_starter=temporal,
     )
+    return JobHandler(service=service)
 
 
 class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
@@ -35,7 +36,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_job_rejects_simulator_when_not_explicitly_enabled(self) -> None:
         simulator, temporal = Mock(), AsyncMock()
-        service = make_service(
+        handler = make_handler(
             job_execution_backend="simulator",
             enable_simulator_runtime=False,
             response=StartJobResponse(job_id=JOB_ID, reused=False),
@@ -43,9 +44,8 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
             temporal=temporal,
         )
 
-        with patch.object(job_handlers, "job_service", service):
-            with self.assertRaises(HTTPException) as raised:
-                await job_handlers.start_job(None)
+        with self.assertRaises(HTTPException) as raised:
+            await handler.start_job(None)
 
         self.assertEqual(raised.exception.status_code, 503)
         self.assertIn("Simulator runtime is disabled", raised.exception.detail)
@@ -54,7 +54,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_job_allows_simulator_when_explicitly_enabled(self) -> None:
         simulator, temporal = Mock(), AsyncMock()
-        service = make_service(
+        handler = make_handler(
             job_execution_backend="simulator",
             enable_simulator_runtime=True,
             response=StartJobResponse(job_id=JOB_ID, reused=False),
@@ -62,8 +62,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
             temporal=temporal,
         )
 
-        with patch.object(job_handlers, "job_service", service):
-            result = await job_handlers.start_job(None)
+        result = await handler.start_job(None)
 
         self.assertEqual(result.job_id, JOB_ID)
         simulator.assert_called_once()
@@ -71,7 +70,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_job_prefers_temporal_backend_by_default(self) -> None:
         simulator, temporal = Mock(), AsyncMock()
-        service = make_service(
+        handler = make_handler(
             job_execution_backend="temporal",
             enable_simulator_runtime=False,
             response=StartJobResponse(job_id=JOB_ID, reused=False),
@@ -79,8 +78,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
             temporal=temporal,
         )
 
-        with patch.object(job_handlers, "job_service", service):
-            result = await job_handlers.start_job(None)
+        result = await handler.start_job(None)
 
         self.assertEqual(result.job_id, JOB_ID)
         temporal.assert_awaited_once()
@@ -88,7 +86,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_job_does_not_schedule_when_repository_reuses_job(self) -> None:
         simulator, temporal = Mock(), AsyncMock()
-        service = make_service(
+        handler = make_handler(
             job_execution_backend="temporal",
             enable_simulator_runtime=False,
             response=StartJobResponse(job_id=JOB_ID, reused=True),
@@ -96,8 +94,7 @@ class JobStartRuntimeTests(unittest.IsolatedAsyncioTestCase):
             temporal=temporal,
         )
 
-        with patch.object(job_handlers, "job_service", service):
-            result = await job_handlers.start_job(StartJobRequest(idempotency_key="ui-123"))
+        result = await handler.start_job(StartJobRequest(idempotency_key="ui-123"))
 
         self.assertEqual(result.job_id, JOB_ID)
         self.assertTrue(result.reused)
