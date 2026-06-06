@@ -206,8 +206,7 @@ select {
 }
 
 .table-wrap {
-  overflow: auto;
-  max-height: 520px;
+  overflow-x: auto;
 }
 
 table {
@@ -340,6 +339,81 @@ td.queue-cell {
   grid-template-columns: minmax(0, 1.8fr) minmax(320px, 0.9fr);
   gap: 1.5rem;
   align-items: start;
+}
+
+/* Full-width task table; Task Detail moved to a slide-over drawer. */
+.detail-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+  z-index: 40;
+}
+
+.drawer-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.task-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(560px, 100%);
+  padding: 1.5rem;
+  background: #0b1018;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -24px 0 80px rgba(0, 0, 0, 0.45);
+  overflow-y: auto;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  align-content: start;
+  transform: translateX(100%);
+  transition: transform 260ms ease;
+  z-index: 50;
+}
+
+.task-drawer.is-open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.drawer-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8f4ec;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.drawer-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.drawer-body {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .detail-main {

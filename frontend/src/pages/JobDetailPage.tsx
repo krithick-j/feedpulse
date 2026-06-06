@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { TEMPORAL_UI_BASE_URL } from "../api/client";
 import { MetricCard } from "../components/MetricCard";
 import { ProgressBar } from "../components/ProgressBar";
@@ -15,6 +15,7 @@ import type { TaskAttempt, TaskStatus } from "../types/jobs";
 export function JobDetailPage() {
   const { jobId, taskId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("url");
   const [recordsOffset, setRecordsOffset] = useState(0);
@@ -50,6 +51,23 @@ export function JobDetailPage() {
   useEffect(() => {
     setRecordsOffset(0);
   }, [parsedTaskId]);
+
+  // Task Detail is a right slide-over drawer, open while a task is in the URL.
+  const drawerOpen = parsedTaskId != null;
+  const closeDrawer = () => navigate(`/jobs/${jobId}`);
+
+  useEffect(() => {
+    if (!drawerOpen) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        navigate(`/jobs/${jobId}`);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen, jobId, navigate]);
 
   if (jobQuery.isLoading) {
     return <main className="shell"><div className="empty-state">Loading job...</div></main>;
@@ -146,43 +164,52 @@ export function JobDetailPage() {
         )}
       </section>
 
-      <section className="detail-grid">
-        <div className="detail-main">
-          <div className="panel">
-            <div className="panel-header">
-              <div>
-                <h2>Task View</h2>
-                <p>Sort and filter the task lane without leaving the detail page.</p>
-              </div>
-              <TaskFilters
-                statusFilter={statusFilter}
-                sortKey={sortKey}
-                onStatusFilterChange={setStatusFilter}
-                onSortKeyChange={setSortKey}
-              />
-            </div>
-          </div>
-
-          {taskListQuery.isLoading ? (
-            <div className="panel"><div className="empty-state">Loading task list...</div></div>
-          ) : (
-            <TaskTable jobId={job.id} tasks={taskListQuery.data ?? []} selectedTaskId={parsedTaskId} />
-          )}
-        </div>
-
-        <aside className="panel detail-side">
+      <section className="detail-stack">
+        <div className="panel">
           <div className="panel-header">
             <div>
-              <h2>Task Detail</h2>
-              <p>Attempts and sample extracted records for the selected task.</p>
+              <h2>Task View</h2>
+              <p>Sort and filter the task lane without leaving the detail page.</p>
             </div>
+            <TaskFilters
+              statusFilter={statusFilter}
+              sortKey={sortKey}
+              onStatusFilterChange={setStatusFilter}
+              onSortKeyChange={setSortKey}
+            />
           </div>
+        </div>
 
-          {!parsedTaskId ? (
-            <div className="empty-state">
-              Select a task row to inspect attempt history and extracted content.
-            </div>
-          ) : taskQuery.isLoading ? (
+        {taskListQuery.isLoading ? (
+          <div className="panel"><div className="empty-state">Loading task list...</div></div>
+        ) : (
+          <TaskTable jobId={job.id} tasks={taskListQuery.data ?? []} selectedTaskId={parsedTaskId} />
+        )}
+      </section>
+
+      <div
+        className={`drawer-backdrop${drawerOpen ? " is-open" : ""}`}
+        onClick={closeDrawer}
+        aria-hidden="true"
+      />
+      <aside
+        className={`task-drawer${drawerOpen ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Task detail"
+      >
+        <div className="drawer-header">
+          <div>
+            <h2>Task Detail</h2>
+            <p>Attempts and sample extracted records for the selected task.</p>
+          </div>
+          <button type="button" className="drawer-close" onClick={closeDrawer} aria-label="Close task detail">
+            ×
+          </button>
+        </div>
+
+        <div className="drawer-body">
+          {!parsedTaskId ? null : taskQuery.isLoading ? (
             <div className="empty-state">Loading task...</div>
           ) : taskQuery.data ? (
             <div className="task-detail">
@@ -297,8 +324,8 @@ export function JobDetailPage() {
           ) : (
             <div className="empty-state">Task not found.</div>
           )}
-        </aside>
-      </section>
+        </div>
+      </aside>
     </main>
   );
 }
